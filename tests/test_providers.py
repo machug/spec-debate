@@ -88,6 +88,26 @@ class TestValidateModelCredentials:
         assert "gpt-5.4" in valid
         assert "claude-opus-4-6" in invalid
 
+    def test_zai_valid_with_key(self, monkeypatch):
+        monkeypatch.setenv("ZAI_API_KEY", "test-key")
+        valid, invalid = validate_model_credentials(["zai/glm-5"])
+        assert "zai/glm-5" in valid
+
+    def test_zai_invalid_without_key(self, monkeypatch):
+        monkeypatch.delenv("ZAI_API_KEY", raising=False)
+        valid, invalid = validate_model_credentials(["zai/glm-4.7"])
+        assert "zai/glm-4.7" in invalid
+
+    def test_moonshot_valid_with_key(self, monkeypatch):
+        monkeypatch.setenv("MOONSHOT_API_KEY", "test-key")
+        valid, invalid = validate_model_credentials(["moonshot/kimi-k2.5"])
+        assert "moonshot/kimi-k2.5" in valid
+
+    def test_moonshot_invalid_without_key(self, monkeypatch):
+        monkeypatch.delenv("MOONSHOT_API_KEY", raising=False)
+        valid, invalid = validate_model_credentials(["moonshot/kimi-k2-thinking"])
+        assert "moonshot/kimi-k2-thinking" in invalid
+
     def test_unknown_prefix_assumed_valid(self, monkeypatch):
         # Unknown provider prefixes pass through (for openrouter, etc.)
         valid, invalid = validate_model_credentials(["openrouter/openai/gpt-5.2-pro"])
