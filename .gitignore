@@ -11,3 +11,13 @@ build/
 venv/
 .spec-debate-checkpoints/
 .claude/
+
+# claude-mem annotations
+CLAUDE.md
+
+# skills.sh local installs
+.agents/
+.crush/
+.goose/
+.junie/
+skills-lock.json

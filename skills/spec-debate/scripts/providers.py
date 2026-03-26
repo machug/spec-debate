@@ -14,66 +14,64 @@ from prompts import FOCUS_AREAS, PERSONAS
 PROFILES_DIR = Path.home() / ".config" / "adversarial-spec" / "profiles"
 GLOBAL_CONFIG_PATH = Path.home() / ".claude" / "adversarial-spec" / "config.json"
 
-# Cost per 1M tokens (approximate, as of 2026)
-MODEL_COSTS = {
-    # OpenAI GPT-5 family (latest)
-    "gpt-5.4": {"input": 2.50, "output": 10.00},
-    "gpt-5.4-pro": {"input": 10.00, "output": 40.00},
-    "gpt-5-mini": {"input": 0.40, "output": 1.60},
-    "gpt-5-nano": {"input": 0.10, "output": 0.40},
-    # OpenAI legacy (still supported)
-    "gpt-4o": {"input": 2.50, "output": 10.00},
-    "gpt-4-turbo": {"input": 10.00, "output": 30.00},
-    "o3": {"input": 10.00, "output": 40.00},
-    # Anthropic Claude (latest)
-    "claude-opus-4-6-20250627": {"input": 15.00, "output": 75.00},
-    "claude-sonnet-4-6-20250627": {"input": 3.00, "output": 15.00},
-    "claude-sonnet-4-20250514": {"input": 3.00, "output": 15.00},
-    "claude-opus-4-20250514": {"input": 15.00, "output": 75.00},
-    # Google Gemini (latest)
-    "gemini/gemini-2.5-pro": {"input": 1.25, "output": 10.00},
-    "gemini/gemini-2.5-flash": {"input": 0.30, "output": 2.50},
-    "gemini/gemini-2.5-flash-lite": {"input": 0.10, "output": 0.40},
-    # Google Gemini legacy
-    "gemini/gemini-2.0-flash": {"input": 0.075, "output": 0.30},
-    # xAI Grok (latest)
-    "xai/grok-4-0709": {"input": 3.00, "output": 15.00},
-    "xai/grok-4-fast-reasoning": {"input": 0.20, "output": 0.50},
-    "xai/grok-4-fast-non-reasoning": {"input": 0.20, "output": 0.50},
-    "xai/grok-3": {"input": 3.00, "output": 15.00},
-    "xai/grok-3-mini": {"input": 0.30, "output": 0.50},
-    # Other providers
-    "mistral/mistral-large": {"input": 2.00, "output": 6.00},
-    "groq/llama-3.3-70b-versatile": {"input": 0.59, "output": 0.79},
-    "deepseek/deepseek-chat": {"input": 0.14, "output": 0.28},
-    "zhipu/glm-4": {"input": 1.40, "output": 1.40},
-    "zhipu/glm-4-plus": {"input": 7.00, "output": 7.00},
-    # Codex CLI models (uses ChatGPT subscription, no per-token cost)
-    "codex/gpt-5.3-codex": {"input": 0.0, "output": 0.0},
-    "codex/gpt-5.2-codex": {"input": 0.0, "output": 0.0},
-    # Gemini CLI models (uses Google account, no per-token cost)
-    "gemini-cli/gemini-3.1-pro-preview": {"input": 0.0, "output": 0.0},
-    "gemini-cli/gemini-3-flash-preview": {"input": 0.0, "output": 0.0},
+# Use LiteLLM's community-maintained model cost registry at runtime.
+# This stays current as users update their litellm package.
+try:
+    from litellm import model_cost as _litellm_model_cost
+except ImportError:
+    _litellm_model_cost = {}
+
+# CLI tools aren't in LiteLLM's registry (subscription/account-based, no per-token cost)
+_CLI_COSTS = {
+    "codex/": {"input": 0.0, "output": 0.0},
+    "gemini-cli/": {"input": 0.0, "output": 0.0},
 }
 
 DEFAULT_COST = {"input": 5.00, "output": 15.00}
 
-# Check if Codex CLI is available
-CODEX_AVAILABLE = shutil.which("codex") is not None
 
-# Check if Gemini CLI is available
-GEMINI_CLI_AVAILABLE = shutil.which("gemini") is not None
+def get_model_cost(model: str) -> dict[str, float]:
+    """Get cost per 1M tokens for a model, using LiteLLM's registry.
+
+    Falls back to DEFAULT_COST for unknown models.
+    """
+    # CLI tools — free (subscription-based)
+    for prefix, cost in _CLI_COSTS.items():
+        if model.startswith(prefix):
+            return cost
+
+    # Look up in LiteLLM's registry (keys use per-token costs, we convert to per-1M)
+    litellm_key = model.split("/", 1)[1] if "/" in model and model.split("/")[0] in (
+        "gemini", "xai", "mistral", "groq", "deepseek", "openrouter"
+    ) else model
+    for key in (model, litellm_key):
+        if key in _litellm_model_cost:
+            entry = _litellm_model_cost[key]
+            return {
+                "input": entry.get("input_cost_per_token", 0) * 1_000_000,
+                "output": entry.get("output_cost_per_token", 0) * 1_000_000,
+            }
+
+    return DEFAULT_COST
+
+# Check CLI tool availability — resolve to absolute paths to avoid PATH hijacking
+CODEX_PATH = shutil.which("codex")
+GEMINI_CLI_PATH = shutil.which("gemini")
+CODEX_AVAILABLE = CODEX_PATH is not None
+GEMINI_CLI_AVAILABLE = GEMINI_CLI_PATH is not None
 
 # Default reasoning effort for Codex CLI (minimal, low, medium, high, xhigh)
 DEFAULT_CODEX_REASONING = "xhigh"
 
 # Bedrock model mapping: friendly names -> Bedrock model IDs
 BEDROCK_MODEL_MAP = {
-    # Anthropic Claude models
-    "claude-3-sonnet": "anthropic.claude-3-sonnet-20240229-v1:0",
-    "claude-3-haiku": "anthropic.claude-3-haiku-20240307-v1:0",
-    "claude-3-opus": "anthropic.claude-3-opus-20240229-v1:0",
-    "claude-3.5-sonnet": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+    # Anthropic Claude models (current generation)
+    "claude-sonnet-4.6": "anthropic.claude-sonnet-4-6-20250627-v1:0",
+    "claude-opus-4.6": "anthropic.claude-opus-4-6-20250627-v1:0",
+    "claude-sonnet-4": "anthropic.claude-sonnet-4-20250514-v1:0",
+    "claude-opus-4": "anthropic.claude-opus-4-20250514-v1:0",
+    "claude-haiku-4.5": "anthropic.claude-haiku-4-5-20251001-v1:0",
+    # Anthropic Claude legacy (still available on Bedrock)
     "claude-3.5-sonnet-v2": "anthropic.claude-3-5-sonnet-20241022-v2:0",
     "claude-3.5-haiku": "anthropic.claude-3-5-haiku-20241022-v1:0",
     # Meta Llama models
@@ -288,21 +286,26 @@ def list_providers():
         print("-" * 60 + "\n")
 
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.4, gpt-5.4-pro, gpt-5-mini, gpt-5-nano"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-5.4, gpt-5.4-pro, o3, o4-mini"),
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
-            "claude-sonnet-4-6-20250627, claude-opus-4-6-20250627",
+            "claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5",
         ),
         ("Google", "GEMINI_API_KEY", "gemini/gemini-2.5-pro, gemini/gemini-2.5-flash"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4-0709, xai/grok-4-fast-reasoning, xai/grok-3"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4-0709, xai/grok-4-1-fast-reasoning"),
+        (
+            "Azure AI Foundry",
+            "AZURE_AI_API_KEY",
+            "foundry/<your-deployment-name> (uses azure-ai-inference SDK)",
+        ),
         ("Mistral", "MISTRAL_API_KEY", "mistral/mistral-large, mistral/codestral"),
         ("Groq", "GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),
         ("Together", "TOGETHER_API_KEY", "together_ai/meta-llama/Llama-3-70b"),
         (
             "OpenRouter",
             "OPENROUTER_API_KEY",
-            "openrouter/openai/gpt-5.4, openrouter/anthropic/claude-sonnet-4-6-20250627",
+            "openrouter/openai/gpt-5.2-pro, openrouter/anthropic/claude-opus-4.6",
         ),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat"),
         ("Zhipu", "ZHIPUAI_API_KEY", "zhipu/glm-4, zhipu/glm-4-plus"),
@@ -379,12 +382,13 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
     """
     providers = [
         ("OpenAI", "OPENAI_API_KEY", "gpt-5.4"),
-        ("Anthropic", "ANTHROPIC_API_KEY", "claude-sonnet-4-6-20250627"),
+        ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-4-6"),
         ("Google", "GEMINI_API_KEY", "gemini/gemini-2.5-flash"),
         ("xAI", "XAI_API_KEY", "xai/grok-4-0709"),
+        # Azure AI Foundry skipped — deployment names are user-specific; use: test --models foundry/<name>
         ("Mistral", "MISTRAL_API_KEY", "mistral/mistral-large"),
         ("Groq", "GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),
-        ("OpenRouter", "OPENROUTER_API_KEY", "openrouter/openai/gpt-5.4"),
+        ("OpenRouter", "OPENROUTER_API_KEY", "openrouter/openai/gpt-5.2-pro"),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat"),
         ("Zhipu", "ZHIPUAI_API_KEY", "zhipu/glm-4"),
     ]
@@ -456,6 +460,7 @@ def validate_model_credentials(models: list[str]) -> tuple[list[str], list[str]]
         "claude-": "ANTHROPIC_API_KEY",
         "gemini/": "GEMINI_API_KEY",
         "xai/": "XAI_API_KEY",
+        "foundry/": "AZURE_AI_API_KEY",  # Uses azure-ai-inference SDK, not litellm
         "mistral/": "MISTRAL_API_KEY",
         "groq/": "GROQ_API_KEY",
         "deepseek/": "DEEPSEEK_API_KEY",
@@ -532,7 +537,7 @@ def handle_bedrock_command(subcommand: str, arg: Optional[str], region: Optional
         else:
             print("    (none configured)")
             print(
-                "\n    Add models with: python3 debate.py bedrock add-model claude-3-sonnet"
+                "\n    Add models with: python3 debate.py bedrock add-model claude-sonnet-4.6"
             )
 
         aliases = bedrock.get("custom_aliases", {})
@@ -571,7 +576,7 @@ def handle_bedrock_command(subcommand: str, arg: Optional[str], region: Optional
 
         if not bedrock.get("available_models"):
             print(
-                "\nNext: Add models with: python3 debate.py bedrock add-model claude-3-sonnet"
+                "\nNext: Add models with: python3 debate.py bedrock add-model claude-sonnet-4.6"
             )
 
     elif subcommand == "disable":
@@ -584,7 +589,7 @@ def handle_bedrock_command(subcommand: str, arg: Optional[str], region: Optional
         if not arg:
             print("Error: Model name required for 'bedrock add-model'", file=sys.stderr)
             print(
-                "Example: python3 debate.py bedrock add-model claude-3-sonnet",
+                "Example: python3 debate.py bedrock add-model claude-sonnet-4.6",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -641,7 +646,7 @@ def handle_bedrock_command(subcommand: str, arg: Optional[str], region: Optional
                 file=sys.stderr,
             )
             print(
-                "Example: python3 debate.py bedrock alias mymodel anthropic.claude-3-sonnet-20240229-v1:0",
+                "Example: python3 debate.py bedrock alias mymodel anthropic.claude-sonnet-4-6-20250627-v1:0",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -651,7 +656,7 @@ def handle_bedrock_command(subcommand: str, arg: Optional[str], region: Optional
             file=sys.stderr,
         )
         print(
-            "Example: python3 debate.py bedrock alias mymodel anthropic.claude-3-sonnet-20240229-v1:0",
+            "Example: python3 debate.py bedrock alias mymodel anthropic.claude-sonnet-4-6-20250627-v1:0",
             file=sys.stderr,
         )
         print("\nAlternatively, edit the config file directly:", file=sys.stderr)

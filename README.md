@@ -75,13 +75,14 @@ You describe product --> Claude drafts spec --> Multiple LLMs critique in parall
 
 | Provider   | Env Var                | Example Models                               |
 |------------|------------------------|----------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.4`, `gpt-5.4-pro`, `gpt-5-mini`      |
-| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-sonnet-4-6-20250627`, `claude-opus-4-6-20250627` |
+| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.4`, `gpt-5.4-pro`, `o3`, `o4-mini`   |
+| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
 | Google     | `GEMINI_API_KEY`       | `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4-0709`, `xai/grok-4-fast-reasoning` |
+| xAI        | `XAI_API_KEY`          | `xai/grok-4-0709`, `xai/grok-4-1-fast-reasoning` |
+| Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral` |
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`               |
-| OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.4`, `openrouter/anthropic/claude-sonnet-4-6-20250627` |
+| OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.2-pro`, `openrouter/anthropic/claude-opus-4.6` |
 | Codex CLI  | ChatGPT subscription   | `codex/gpt-5.3-codex`, `codex/gpt-5.2-codex` |
 | Gemini CLI | Google account         | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
 | Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-chat`                     |
@@ -90,7 +91,8 @@ You describe product --> Claude drafts spec --> Multiple LLMs critique in parall
 Check which keys are configured:
 
 ```bash
-python3 "$(find ~/.claude -name debate.py -path '*spec-debate*' 2>/dev/null | head -1)" providers
+cd skills/spec-debate/scripts
+python3 debate.py providers
 ```
 
 ## AWS Bedrock Support
@@ -98,9 +100,10 @@ python3 "$(find ~/.claude -name debate.py -path '*spec-debate*' 2>/dev/null | he
 For enterprise users who need to route all model calls through AWS Bedrock:
 
 ```bash
-python3 "$(find ~/.claude -name debate.py -path '*spec-debate*' 2>/dev/null | head -1)" bedrock enable --region us-east-1
-python3 "$(find ~/.claude -name debate.py -path '*spec-debate*' 2>/dev/null | head -1)" bedrock add-model claude-3-sonnet
-python3 "$(find ~/.claude -name debate.py -path '*spec-debate*' 2>/dev/null | head -1)" bedrock status
+cd skills/spec-debate/scripts
+python3 debate.py bedrock enable --region us-east-1
+python3 debate.py bedrock add-model claude-sonnet-4.6
+python3 debate.py bedrock status
 ```
 
 When Bedrock is enabled, **all model calls route through Bedrock** - no direct API calls are made. Configuration is stored at `~/.claude/spec-debate/config.json`.
@@ -111,7 +114,7 @@ When Bedrock is enabled, **all model calls route through Bedrock** - no direct A
 
 ```bash
 export OPENROUTER_API_KEY="sk-or-..."
-python3 debate.py critique --models openrouter/openai/gpt-5.4,openrouter/anthropic/claude-sonnet-4-6-20250627 < spec.md
+python3 debate.py critique --models openrouter/openai/gpt-5.2-pro,openrouter/anthropic/claude-opus-4.6 < spec.md
 ```
 
 ## Codex CLI Support

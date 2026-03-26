@@ -21,13 +21,14 @@ Usage:
     python3 debate.py sessions
 
 Supported providers (set corresponding API key):
-    OpenAI:     OPENAI_API_KEY       models: gpt-5.4, gpt-5.4-pro, gpt-5-mini, gpt-5-nano, etc.
-    Anthropic:  ANTHROPIC_API_KEY    models: claude-sonnet-4-6-20250627, claude-opus-4-6-20250627, etc.
+    OpenAI:     OPENAI_API_KEY       models: gpt-5.4, gpt-5.4-pro, o3, o4-mini, etc.
+    Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5, etc.
     Google:     GEMINI_API_KEY       models: gemini/gemini-2.5-pro, gemini/gemini-2.5-flash, etc.
-    xAI:        XAI_API_KEY          models: xai/grok-4-0709, xai/grok-4-fast-reasoning, xai/grok-3, etc.
+    xAI:        XAI_API_KEY          models: xai/grok-4-0709, xai/grok-4-1-fast-reasoning, etc.
+    Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-6, foundry/grok-4, foundry/Phi-4-reasoning, etc.
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
     Groq:       GROQ_API_KEY         models: groq/llama-3.3-70b, etc.
-    OpenRouter: OPENROUTER_API_KEY   models: openrouter/openai/gpt-5.4, openrouter/anthropic/claude-sonnet-4-6-20250627, etc.
+    OpenRouter: OPENROUTER_API_KEY   models: openrouter/openai/gpt-5.2-pro, openrouter/anthropic/claude-opus-4.6, etc.
     Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.3-codex, codex/gpt-5.2-codex
                 Install: npm install -g @openai/codex && codex login
                 Reasoning: --codex-reasoning xhigh (minimal, low, medium, high, xhigh)
@@ -67,6 +68,9 @@ except ImportError:
 
 from models import (  # noqa: E402
     ModelResponse,
+    call_codex_model,
+    call_foundry_model,
+    call_gemini_cli_model,
     call_models_parallel,
     cost_tracker,
     extract_tasks,
@@ -78,8 +82,10 @@ from models import (  # noqa: E402
 from prompts import EXPORT_TASKS_PROMPT, get_doc_type_name  # noqa: E402
 from providers import (  # noqa: E402
     DEFAULT_CODEX_REASONING,
+    get_available_providers,
     get_bedrock_config,
     get_default_model,
+    get_model_cost,
     handle_bedrock_command,
     list_focus_areas,
     list_personas,
@@ -224,7 +230,7 @@ def add_core_arguments(parser: argparse.ArgumentParser) -> None:
         "--models",
         "-m",
         default=None,
-        help="Comma-separated list of models (e.g., gpt-4o,gemini/gemini-2.0-flash,xai/grok-3)",
+        help="Comma-separated list of models (e.g., gpt-5.4,gemini/gemini-2.5-flash,xai/grok-4-0709)",
     )
     parser.add_argument(
         "--doc-type",
@@ -366,10 +372,10 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  echo "spec" | python3 debate.py critique --models gpt-4o
-  echo "spec" | python3 debate.py critique --models gpt-4o --focus security
-  echo "spec" | python3 debate.py critique --models gpt-4o --persona "security engineer"
-  echo "spec" | python3 debate.py critique --models gpt-4o --context ./api.md
+  echo "spec" | python3 debate.py critique --models gpt-5.4
+  echo "spec" | python3 debate.py critique --models gpt-5.4 --focus security
+  echo "spec" | python3 debate.py critique --models gpt-5.4 --persona "security engineer"
+  echo "spec" | python3 debate.py critique --models gpt-5.4 --context ./api.md
   echo "spec" | python3 debate.py critique --profile my-security-profile
   python3 debate.py diff --previous old.md --current new.md
   echo "spec" | python3 debate.py export-tasks --doc-type prd
@@ -377,15 +383,15 @@ Examples:
   python3 debate.py focus-areas
   python3 debate.py personas
   python3 debate.py profiles
-  python3 debate.py save-profile myprofile --models gpt-4o,gemini/gemini-2.0-flash --focus security
+  python3 debate.py save-profile myprofile --models gpt-5.4,gemini/gemini-2.5-flash --focus security
 
 Bedrock commands:
   python3 debate.py bedrock status                           # Show Bedrock config
   python3 debate.py bedrock enable --region us-east-1        # Enable Bedrock mode
   python3 debate.py bedrock disable                          # Disable Bedrock mode
-  python3 debate.py bedrock add-model claude-3-sonnet        # Add model to available list
-  python3 debate.py bedrock remove-model claude-3-haiku      # Remove model from list
-  python3 debate.py bedrock alias mymodel anthropic.claude-3-sonnet-20240229-v1:0  # Add custom alias
+  python3 debate.py bedrock add-model claude-sonnet-4.6      # Add model to available list
+  python3 debate.py bedrock remove-model claude-haiku-4.5    # Remove model from list
+  python3 debate.py bedrock alias mymodel anthropic.claude-sonnet-4-6-20250627-v1:0  # Add custom alias
 
 Document types:
   prd   - Product Requirements Document (business/product focus)
@@ -399,6 +405,7 @@ Document types:
         choices=[
             "critique",
             "providers",
+            "test",
             "send-final",
             "diff",
             "export-tasks",
@@ -432,6 +439,84 @@ Document types:
     return parser
 
 
+def handle_test_command(args: argparse.Namespace) -> bool:
+    """Test API connectivity for one or more models with a minimal request.
+
+    Usage:
+        python3 debate.py test --models gpt-5.4,claude-opus-4-6
+        python3 debate.py test  (tests all providers with configured keys)
+    """
+    import time
+
+    if args.models:
+        models = [m.strip() for m in args.models.split(",") if m.strip()]
+    else:
+        # Test one model per available provider
+        available = get_available_providers()
+        if not available:
+            print("No providers configured. Set API keys first.", file=sys.stderr)
+            print("Run 'python3 debate.py providers' to see options.", file=sys.stderr)
+            return True
+        models = [p[2] for p in available]
+
+    print(f"Testing {len(models)} model(s)...\n")
+
+    for model in models:
+        display = model
+        print(f"  {display:<45}", end="", flush=True)
+        start = time.time()
+        try:
+            if model.startswith("codex/"):
+                response, inp, out = call_codex_model(
+                    "You are a test assistant.",
+                    "Reply with exactly: PING OK",
+                    model,
+                    timeout=30,
+                )
+            elif model.startswith("gemini-cli/"):
+                response, inp, out = call_gemini_cli_model(
+                    "You are a test assistant.",
+                    "Reply with exactly: PING OK",
+                    model,
+                    timeout=30,
+                )
+            elif model.startswith("foundry/"):
+                from models import call_foundry_model
+                response, inp, out = call_foundry_model(
+                    "You are a test assistant.",
+                    "Reply with exactly: PING OK",
+                    model,
+                    timeout=30,
+                )
+            else:
+                import litellm
+
+                kwargs = {
+                    "model": model,
+                    "messages": [{"role": "user", "content": "Reply with exactly: PING OK"}],
+                    "max_tokens": 20,
+                    "timeout": 30,
+                }
+                if not is_fixed_temperature_model(model):
+                    kwargs["temperature"] = 0.0
+
+                resp = litellm.completion(**kwargs)
+                response = resp.choices[0].message.content or ""
+                inp = resp.usage.prompt_tokens if resp.usage else 0
+                out = resp.usage.completion_tokens if resp.usage else 0
+
+            elapsed = time.time() - start
+            cost = get_model_cost(model)
+            print(f"OK  ({elapsed:.1f}s, {inp}+{out} tokens, ${cost['input']}/{cost['output']} per 1M)")
+        except Exception as e:
+            elapsed = time.time() - start
+            err_msg = str(e)[:80]
+            print(f"FAIL ({elapsed:.1f}s) {err_msg}")
+
+    print("\nDone.")
+    return True
+
+
 def handle_info_command(args: argparse.Namespace) -> bool:
     """Handle info commands (providers, focus-areas, personas, profiles, sessions).
 
@@ -444,6 +529,10 @@ def handle_info_command(args: argparse.Namespace) -> bool:
     if args.action == "providers":
         list_providers()
         return True
+
+    if args.action == "test":
+        return handle_test_command(args)
+
 
     if args.action == "focus-areas":
         list_focus_areas()
@@ -569,17 +658,18 @@ def parse_models(args: argparse.Namespace) -> list[str]:
             )
             print("\nAvailable providers:", file=sys.stderr)
             print(
-                "  OpenAI:    Set OPENAI_API_KEY for gpt-4o, o1, etc.", file=sys.stderr
+                "  OpenAI:    Set OPENAI_API_KEY for gpt-5.4, gpt-5.4-pro, o3, etc.", file=sys.stderr
             )
             print(
-                "  Anthropic: Set ANTHROPIC_API_KEY for claude-sonnet-4-20250514, etc.",
+                "  Anthropic: Set ANTHROPIC_API_KEY for claude-opus-4-6, claude-sonnet-4-6, etc.",
                 file=sys.stderr,
             )
             print(
-                "  Google:    Set GEMINI_API_KEY for gemini/gemini-2.0-flash, etc.",
+                "  Google:    Set GEMINI_API_KEY for gemini/gemini-2.5-flash, etc.",
                 file=sys.stderr,
             )
-            print("  xAI:       Set XAI_API_KEY for xai/grok-3, etc.", file=sys.stderr)
+            print("  xAI:       Set XAI_API_KEY for xai/grok-4-0709, xai/grok-4-1-fast-reasoning, etc.", file=sys.stderr)
+            print("  Azure AI:  Set AZURE_AI_API_KEY for foundry/claude-opus-4-6, etc.", file=sys.stderr)
             print(
                 "  Mistral:   Set MISTRAL_API_KEY for mistral/mistral-large, etc.",
                 file=sys.stderr,
@@ -596,7 +686,7 @@ def parse_models(args: argparse.Namespace) -> list[str]:
                 "  Zhipu:     Set ZHIPUAI_API_KEY for zhipu/glm-4, etc.",
                 file=sys.stderr,
             )
-            print("\nOr specify models explicitly: --models gpt-4o", file=sys.stderr)
+            print("\nOr specify models explicitly: --models gpt-5.4", file=sys.stderr)
             print(
                 "\nRun 'python3 debate.py providers' to see which keys are set.",
                 file=sys.stderr,
@@ -637,7 +727,7 @@ def setup_bedrock(
             file=sys.stderr,
         )
         print(
-            "Add models with: python3 debate.py bedrock add-model claude-3-sonnet",
+            "Add models with: python3 debate.py bedrock add-model claude-sonnet-4.6",
             file=sys.stderr,
         )
         print("Or disable Bedrock: python3 debate.py bedrock disable", file=sys.stderr)

@@ -37,10 +37,11 @@ from prompts import (
 )
 from providers import (
     CODEX_AVAILABLE,
+    CODEX_PATH,
     DEFAULT_CODEX_REASONING,
-    DEFAULT_COST,
     GEMINI_CLI_AVAILABLE,
-    MODEL_COSTS,
+    GEMINI_CLI_PATH,
+    get_model_cost,
 )
 
 MAX_RETRIES = 3
@@ -95,7 +96,7 @@ class CostTracker:
 
     def add(self, model: str, input_tokens: int, output_tokens: int) -> float:
         """Add usage for a model call and return the cost."""
-        costs = MODEL_COSTS.get(model, DEFAULT_COST)
+        costs = get_model_cost(model)
         cost = (input_tokens / 1_000_000 * costs["input"]) + (
             output_tokens / 1_000_000 * costs["output"]
         )
@@ -277,6 +278,67 @@ def generate_diff(previous: str, current: str) -> str:
     return "".join(diff)
 
 
+def call_foundry_model(
+    system_prompt: str,
+    user_message: str,
+    model: str,
+    timeout: int = 600,
+) -> tuple[str, int, int]:
+    """Call Azure AI Foundry v2 using the azure-ai-inference SDK.
+
+    Args:
+        system_prompt: System instructions for the model.
+        user_message: User prompt to send.
+        model: Model name with foundry/ prefix (e.g., "foundry/gpt-5-mini").
+        timeout: Timeout in seconds.
+
+    Returns:
+        Tuple of (response_text, input_tokens, output_tokens).
+    """
+    from azure.ai.inference import ChatCompletionsClient
+    from azure.ai.inference.models import SystemMessage, UserMessage
+    from azure.core.credentials import AzureKeyCredential
+
+    api_key = os.environ.get("AZURE_AI_API_KEY")
+    api_base = os.environ.get("AZURE_AI_API_BASE", "")
+
+    if not api_key:
+        raise ValueError("AZURE_AI_API_KEY environment variable not set")
+
+    # Derive the /models endpoint from the base URL
+    endpoint = api_base.rstrip("/")
+    if not endpoint.endswith("/models"):
+        # Strip project path if present and append /models
+        # e.g., https://x.services.ai.azure.com/api/projects/foo -> https://x.services.ai.azure.com/models
+        parts = endpoint.split(".services.ai.azure.com")
+        if len(parts) == 2:
+            endpoint = parts[0] + ".services.ai.azure.com/models"
+        else:
+            endpoint = endpoint + "/models"
+
+    # Strip foundry/ prefix to get deployment name
+    deployment_name = model.split("/", 1)[1] if "/" in model else model
+
+    client = ChatCompletionsClient(
+        endpoint=endpoint,
+        credential=AzureKeyCredential(api_key),
+    )
+
+    response = client.complete(
+        messages=[
+            SystemMessage(content=system_prompt),
+            UserMessage(content=user_message),
+        ],
+        model=deployment_name,
+    )
+
+    content = response.choices[0].message.content or ""
+    input_tokens = response.usage.prompt_tokens if response.usage else 0
+    output_tokens = response.usage.completion_tokens if response.usage else 0
+
+    return content, input_tokens, output_tokens
+
+
 def call_codex_model(
     system_prompt: str,
     user_message: str,
@@ -319,7 +381,7 @@ USER REQUEST:
 
     try:
         cmd = [
-            "codex",
+            CODEX_PATH,
             "exec",
             "--json",
             "--full-auto",
@@ -416,7 +478,7 @@ USER REQUEST:
     try:
         # Use gemini CLI with the prompt passed via stdin and -p flag
         cmd = [
-            "gemini",
+            GEMINI_CLI_PATH,
             "-m",
             actual_model,
             "-y",
@@ -610,6 +672,56 @@ def call_single_model(
             model=model, response="", agreed=False, spec=None, error=last_error
         )
 
+    # Route Azure AI Foundry models to dedicated handler
+    if model.startswith("foundry/"):
+        last_error = None
+        for attempt in range(MAX_RETRIES):
+            try:
+                content, input_tokens, output_tokens = call_foundry_model(
+                    system_prompt=system_prompt,
+                    user_message=user_message,
+                    model=model,
+                    timeout=timeout,
+                )
+                agreed = "[AGREE]" in content
+                extracted = extract_spec(content)
+
+                if not agreed and not extracted:
+                    print(
+                        f"Warning: {model} provided critique but no [SPEC] tags found. Response may be malformed.",
+                        file=sys.stderr,
+                    )
+
+                cost = cost_tracker.add(model, input_tokens, output_tokens)
+
+                return ModelResponse(
+                    model=model,
+                    response=content,
+                    agreed=agreed,
+                    spec=extracted,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    cost=cost,
+                )
+            except Exception as e:
+                last_error = str(e)
+                if attempt < MAX_RETRIES - 1:
+                    delay = RETRY_BASE_DELAY * (2**attempt)
+                    print(
+                        f"Warning: {model} failed (attempt {attempt + 1}/{MAX_RETRIES}): {last_error}. Retrying in {delay:.1f}s...",
+                        file=sys.stderr,
+                    )
+                    time.sleep(delay)
+                else:
+                    print(
+                        f"Error: {model} failed after {MAX_RETRIES} attempts: {last_error}",
+                        file=sys.stderr,
+                    )
+
+        return ModelResponse(
+            model=model, response="", agreed=False, spec=None, error=last_error
+        )
+
     # Standard litellm path for all other providers
     last_error = None
     display_model = model
@@ -704,6 +816,8 @@ def call_models_parallel(
     bedrock_region: Optional[str] = None,
 ) -> list[ModelResponse]:
     """Call multiple models in parallel and collect responses."""
+    if not models:
+        return []
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(models)) as executor:
         future_to_model = {
