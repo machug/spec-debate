@@ -308,7 +308,8 @@ def list_providers():
             "openrouter/openai/gpt-5.2-pro, openrouter/anthropic/claude-opus-4.6",
         ),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat"),
-        ("Zhipu", "ZHIPUAI_API_KEY", "zhipu/glm-4, zhipu/glm-4-plus"),
+        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5, zai/glm-4.7, zai/glm-4.5"),
+        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.5, moonshot/kimi-k2-thinking"),
     ]
 
     if bedrock_config.get("enabled"):
@@ -390,7 +391,8 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
         ("Groq", "GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),
         ("OpenRouter", "OPENROUTER_API_KEY", "openrouter/openai/gpt-5.2-pro"),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat"),
-        ("Zhipu", "ZHIPUAI_API_KEY", "zhipu/glm-4"),
+        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5"),
+        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.5"),
     ]
 
     available: list[tuple[str, Optional[str], str]] = []
@@ -464,7 +466,9 @@ def validate_model_credentials(models: list[str]) -> tuple[list[str], list[str]]
         "mistral/": "MISTRAL_API_KEY",
         "groq/": "GROQ_API_KEY",
         "deepseek/": "DEEPSEEK_API_KEY",
-        "zhipu/": "ZHIPUAI_API_KEY",
+        "zai/": "ZAI_API_KEY",
+        "zhipu/": "ZHIPUAI_API_KEY",  # Legacy prefix, use zai/ instead
+        "moonshot/": "MOONSHOT_API_KEY",
         "codex/": None,  # Uses ChatGPT subscription, not API key
         "gemini-cli/": None,  # Uses Google account, not API key
     }

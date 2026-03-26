@@ -30,7 +30,8 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
 | OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.2-pro`, `openrouter/anthropic/claude-opus-4.6` |
 | Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-chat`                    |
-| Zhipu      | `ZHIPUAI_API_KEY`      | `zhipu/glm-4`, `zhipu/glm-4-plus`           |
+| ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5`, `zai/glm-4.7`, `zai/glm-4.5`  |
+| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.5`, `moonshot/kimi-k2-thinking` |
 | Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.3-codex`, `codex/gpt-5.2-codex` |
 | Gemini CLI | (Google account)       | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
 
@@ -349,9 +350,13 @@ Then present available models to the user using AskUserQuestion with multiSelect
 **If DEEPSEEK_API_KEY is set, include:**
 - `deepseek/deepseek-chat` - Cost-effective
 
-**If ZHIPUAI_API_KEY is set, include:**
-- `zhipu/glm-4` - Chinese language model
-- `zhipu/glm-4-plus` - Enhanced GLM model
+**If ZAI_API_KEY is set, include:**
+- `zai/glm-5` - Latest GLM model
+- `zai/glm-4.7` - Strong reasoning
+
+**If MOONSHOT_API_KEY is set, include:**
+- `moonshot/kimi-k2.5` - Latest Kimi model
+- `moonshot/kimi-k2-thinking` - Deep reasoning variant
 
 **If Codex CLI is installed, include:**
 - `codex/gpt-5.3-codex` - OpenAI Codex with extended reasoning

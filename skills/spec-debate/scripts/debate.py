@@ -29,6 +29,9 @@ Supported providers (set corresponding API key):
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
     Groq:       GROQ_API_KEY         models: groq/llama-3.3-70b, etc.
     OpenRouter: OPENROUTER_API_KEY   models: openrouter/openai/gpt-5.2-pro, openrouter/anthropic/claude-opus-4.6, etc.
+    Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-chat, etc.
+    ZAI (GLM):  ZAI_API_KEY          models: zai/glm-5, zai/glm-4.7, etc.
+    Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.5, moonshot/kimi-k2-thinking, etc.
     Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.3-codex, codex/gpt-5.2-codex
                 Install: npm install -g @openai/codex && codex login
                 Reasoning: --codex-reasoning xhigh (minimal, low, medium, high, xhigh)
@@ -684,10 +687,8 @@ def parse_models(args: argparse.Namespace) -> list[str]:
                 "  Deepseek:  Set DEEPSEEK_API_KEY for deepseek/deepseek-chat, etc.",
                 file=sys.stderr,
             )
-            print(
-                "  Zhipu:     Set ZHIPUAI_API_KEY for zhipu/glm-4, etc.",
-                file=sys.stderr,
-            )
+            print("  ZAI (GLM): Set ZAI_API_KEY for zai/glm-5, zai/glm-4.7, etc.", file=sys.stderr)
+            print("  Kimi:      Set MOONSHOT_API_KEY for moonshot/kimi-k2.5, etc.", file=sys.stderr)
             print("\nOr specify models explicitly: --models gpt-5.4", file=sys.stderr)
             print(
                 "\nRun 'python3 debate.py providers' to see which keys are set.",

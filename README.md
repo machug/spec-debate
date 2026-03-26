@@ -84,6 +84,8 @@ You describe product --> Claude drafts spec --> Multiple LLMs critique in parall
 | Mistral | `MISTRAL_API_KEY` | `mistral/mistral-large`, `mistral/codestral` |
 | Groq | `GROQ_API_KEY` | `groq/llama-3.3-70b-versatile` |
 | Deepseek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-chat` |
+| ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5`, `zai/glm-4.7` |
+| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.5`, `moonshot/kimi-k2-thinking` |
 | Codex CLI | ChatGPT subscription | `codex/gpt-5.3-codex` |
 | Gemini CLI | Google account | `gemini-cli/gemini-3.1-pro-preview` |
 
