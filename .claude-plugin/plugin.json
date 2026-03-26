@@ -1,0 +1,12 @@
+{
+  "name": "spec-debate",
+  "version": "1.0.0",
+  "description": "Multi-LLM adversarial spec debate. Refines PRDs and tech specs through iterative critique until all models reach consensus.",
+  "author": {
+    "name": "Hugh McIntyre"
+  },
+  "homepage": "https://hughtec.com",
+  "repository": "https://github.com/machug/spec-debate",
+  "license": "MIT",
+  "keywords": ["spec", "debate", "adversarial", "prd", "tech-spec", "multi-llm", "critique"]
+}
