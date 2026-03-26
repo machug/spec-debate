@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.env
+.env.local
+.venv/
+venv/
+.spec-debate-checkpoints/
+.claude/
