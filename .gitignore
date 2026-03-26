@@ -12,8 +12,9 @@ venv/
 .spec-debate-checkpoints/
 .claude/
 
-# claude-mem annotations
+# claude / agents annotations
 CLAUDE.md
+AGENTS.md
 
 # skills.sh local installs
 .agents/
