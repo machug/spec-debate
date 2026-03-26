@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Telegram bot utilities for adversarial spec development.
+Telegram bot utilities for spec-debate.
 
 Usage:
     python3 telegram_bot.py setup              # Setup instructions and chat_id discovery
@@ -285,7 +285,7 @@ def cmd_setup(args: argparse.Namespace) -> None:
     token, chat_id = get_config()
 
     print("=" * 50)
-    print("Telegram Bot Setup for Adversarial Spec")
+    print("Telegram Bot Setup for spec-debate")
     print("=" * 50)
     print()
 
@@ -317,7 +317,7 @@ def cmd_setup(args: argparse.Namespace) -> None:
     print("Configuration complete. Testing...")
     print()
 
-    if send_message(token, chat_id, "Adversarial Spec bot connected."):
+    if send_message(token, chat_id, "spec-debate bot connected."):
         print("Test message sent successfully.")
     else:
         print("Failed to send test message. Check your configuration.")
@@ -417,7 +417,7 @@ def cmd_notify(args: argparse.Namespace) -> None:
 def main() -> None:
     """Entry point for the telegram_bot CLI."""
     parser = argparse.ArgumentParser(
-        description="Telegram bot utilities for adversarial spec development",
+        description="Telegram bot utilities for spec-debate",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)

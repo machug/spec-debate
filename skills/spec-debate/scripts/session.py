@@ -1,4 +1,4 @@
-"""Session state management and checkpointing for adversarial spec debates."""
+"""Session state management and checkpointing for spec-debate."""
 
 from __future__ import annotations
 

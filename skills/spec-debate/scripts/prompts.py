@@ -1,4 +1,4 @@
-"""Prompt templates and system instructions for adversarial spec debate."""
+"""Prompt templates and system instructions for spec-debate."""
 
 from __future__ import annotations
 

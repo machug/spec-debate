@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Adversarial spec debate script.
+Spec-debate: multi-LLM adversarial specification development.
 Sends specs to multiple LLMs for critique using LiteLLM.
 
 Usage:
@@ -368,7 +368,7 @@ def create_parser() -> argparse.ArgumentParser:
         Configured ArgumentParser instance.
     """
     parser = argparse.ArgumentParser(
-        description="Adversarial spec debate with multiple LLMs",
+        description="spec-debate: refine specs through multi-LLM adversarial review",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

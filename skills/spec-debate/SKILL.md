@@ -4,7 +4,7 @@ description: Iteratively refine a product spec by debating with multiple LLMs (G
 allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSearch, Grep, Glob
 ---
 
-# Adversarial Spec Development
+# spec-debate
 
 Generate and refine specifications through iterative debate with multiple LLMs until all models reach consensus.
 
