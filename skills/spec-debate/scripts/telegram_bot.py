@@ -65,7 +65,7 @@ def api_call(
         url += "?" + urlencode(params)
 
     try:
-        req = Request(url, headers={"User-Agent": "adversarial-spec/1.0"})
+        req = Request(url, headers={"User-Agent": "spec-debate/1.0"})
         with urlopen(req, timeout=30) as response:  # noqa: S310
             return json.loads(response.read().decode("utf-8"))
     except HTTPError as e:

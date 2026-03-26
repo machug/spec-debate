@@ -9,8 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-SESSIONS_DIR = Path.home() / ".config" / "adversarial-spec" / "sessions"
-CHECKPOINTS_DIR = Path.cwd() / ".adversarial-spec-checkpoints"
+SESSIONS_DIR = Path.home() / ".config" / "spec-debate" / "sessions"
+CHECKPOINTS_DIR = Path.cwd() / ".spec-debate-checkpoints"
 
 
 @dataclass
