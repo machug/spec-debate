@@ -1,3 +1,3 @@
-"""Adversarial spec development scripts."""
+"""Spec-debate: multi-LLM adversarial specification development."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

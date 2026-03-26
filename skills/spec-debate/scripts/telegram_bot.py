@@ -29,8 +29,21 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from pathlib import Path as _Path
+
 TELEGRAM_API: str = "https://api.telegram.org/bot{token}/{method}"
 MAX_MESSAGE_LENGTH: int = 4096
+
+# Read version from sibling __init__.py
+try:
+    _init = _Path(__file__).parent / "__init__.py"
+    _VERSION = "0.0.0"
+    for _line in _init.read_text().splitlines():
+        if _line.startswith("__version__"):
+            _VERSION = _line.split("=", 1)[1].strip().strip("\"'")
+            break
+except Exception:
+    _VERSION = "0.0.0"
 
 
 def get_config() -> tuple[str, str]:
@@ -65,7 +78,7 @@ def api_call(
         url += "?" + urlencode(params)
 
     try:
-        req = Request(url, headers={"User-Agent": "spec-debate/1.0"})
+        req = Request(url, headers={"User-Agent": f"spec-debate/{_VERSION}"})
         with urlopen(req, timeout=30) as response:  # noqa: S310
             return json.loads(response.read().decode("utf-8"))
     except HTTPError as e:
