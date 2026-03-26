@@ -48,18 +48,19 @@ MAX_RETRIES = 3
 RETRY_BASE_DELAY = 1.0  # seconds
 
 
-def is_fixed_temperature_model(model: str) -> bool:
+def is_reasoning_model(model: str) -> bool:
     """
-    Check if a model requires default temperature (no custom temperature support).
+    Check if a model is a reasoning model (o-series, gpt-5).
 
-    O-series models (o1, o3, o4) and GPT-5 family models don't support custom
-    temperature. They only accept temperature=1 or no temperature parameter.
+    Reasoning models differ from standard models:
+    - They ignore the temperature parameter (fixed internally)
+    - They use max_completion_tokens instead of max_tokens
 
     Args:
         model: Model identifier string.
 
     Returns:
-        True if the model does not support custom temperature.
+        True if the model is a reasoning model.
     """
     model_lower = model.lower()
     # O-series: o1, o3, o4, etc.
@@ -738,12 +739,10 @@ def call_single_model(
                 "timeout": timeout,
             }
 
-            # GPT-5 models don't accept max_tokens or max_output_tokens
-            if "gpt-5" not in actual_model.lower():
+            if is_reasoning_model(actual_model):
+                completion_kwargs["max_completion_tokens"] = 8000
+            else:
                 completion_kwargs["max_tokens"] = 8000
-
-            # Some models don't support custom temperature (O-series, GPT-5)
-            if not is_fixed_temperature_model(actual_model):
                 completion_kwargs["temperature"] = 0.7
 
             response = completion(**completion_kwargs)

@@ -76,7 +76,7 @@ from models import (  # noqa: E402
     extract_tasks,
     generate_diff,
     get_critique_summary,
-    is_fixed_temperature_model,
+    is_reasoning_model,
     load_context_files,
 )
 from prompts import EXPORT_TASKS_PROMPT, get_doc_type_name  # noqa: E402
@@ -494,10 +494,12 @@ def handle_test_command(args: argparse.Namespace) -> bool:
                 kwargs = {
                     "model": model,
                     "messages": [{"role": "user", "content": "Reply with exactly: PING OK"}],
-                    "max_tokens": 20,
                     "timeout": 30,
                 }
-                if not is_fixed_temperature_model(model):
+                if is_reasoning_model(model):
+                    kwargs["max_completion_tokens"] = 20
+                else:
+                    kwargs["max_tokens"] = 20
                     kwargs["temperature"] = 0.0
 
                 resp = litellm.completion(**kwargs)
@@ -795,11 +797,12 @@ def handle_export_tasks(args: argparse.Namespace, models: list[str]) -> None:
         completion_kwargs = {
             "model": models[0],
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 8000,
         }
 
-        # O-series models don't support custom temperature
-        if not is_fixed_temperature_model(models[0]):
+        if is_reasoning_model(models[0]):
+            completion_kwargs["max_completion_tokens"] = 8000
+        else:
+            completion_kwargs["max_tokens"] = 8000
             completion_kwargs["temperature"] = 0.3
 
         response = completion(**completion_kwargs)
