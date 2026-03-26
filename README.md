@@ -1,39 +1,38 @@
 # spec-debate
 
-A Claude Code plugin that iteratively refines product specifications through multi-model debate until consensus is reached.
+A Claude Code plugin that iteratively refines product specifications through multi-model adversarial debate until all models reach consensus.
 
-> **Attribution**: Originally based on [adversarial-spec](https://github.com/zscole/adversarial-spec) by [Zak Cole](https://github.com/zscole). This fork adds GPT-5/O3/O4 compatibility fixes, updated model defaults and pricing for 2026, and is actively maintained.
+> **Attribution**: Originally based on [adversarial-spec](https://github.com/zscole/adversarial-spec) by [Zak Cole](https://github.com/zscole). This fork adds current-gen model support, Azure AI Foundry integration, dynamic cost tracking, and is actively maintained.
 
 **Key insight:** A single LLM reviewing a spec will miss things. Multiple LLMs debating a spec will catch gaps, challenge assumptions, and surface edge cases that any one model would overlook. The result is a document that has survived rigorous adversarial review.
 
 **Claude is an active participant**, not just an orchestrator. Claude provides independent critiques, challenges opponent models, and contributes substantive improvements alongside external models.
 
-## What Changed from the Original
-
-This fork addresses compatibility issues and stale defaults in the upstream project:
-
-- **`is_o_series_model()` -> `is_fixed_temperature_model()`** - Expanded to handle O3, O4, and GPT-5 family models (none support custom temperature)
-- **GPT-5 `max_tokens` fix** - GPT-5 models reject `max_tokens`/`max_output_tokens`; conditionally omitted
-- **Null safety fix** - `response.choices[0].message.content or ""` prevents NoneType errors
-- **Updated all model defaults** to current generation (GPT-5.4, Claude 4.6, Gemini 2.5, Grok 4, Codex 5.3)
-- **Updated cost table** with 2026 pricing across all providers
-- **Added O3/O4 to credential validation** provider map
-- **Test suite updated** with coverage for all new models and edge cases
-
 ## Quick Start
 
 ```bash
-# 1. Add the marketplace and install the plugin
+# 1. Install the plugin
 claude plugin marketplace add machug/marketplace
 claude plugin install spec-debate@machug
 
-# 2. Set at least one API key
+# 2. Install dependencies
+pip install litellm azure-ai-inference
+
+# 3. Set at least one API key
 export OPENAI_API_KEY="sk-..."
 # Or use OpenRouter for access to multiple providers with one key
 export OPENROUTER_API_KEY="sk-or-..."
 
-# 3. Run it
+# 4. Test your providers
+/spec-debate providers
+
+# 5. Run it
 /spec-debate "Build a rate limiter service with Redis backend"
+```
+
+Also available via [skills.sh](https://skills.sh) for cross-platform agent support:
+```bash
+npx skills add machug/spec-debate
 ```
 
 ## How It Works
@@ -56,158 +55,134 @@ You describe product --> Claude drafts spec --> Multiple LLMs critique in parall
 ```
 
 1. Describe your product concept or provide an existing document
-2. (Optional) Start with an in-depth interview to capture requirements
+2. (Optional) Interview mode for in-depth requirements gathering
 3. Claude drafts the initial document (PRD or tech spec)
-4. Document is sent to opponent models (GPT, Gemini, Grok, etc.) for parallel critique
+4. Document sent to opponent models for parallel critique
 5. Claude provides independent critique alongside opponent feedback
-6. Claude synthesizes all feedback and revises
-7. Loop continues until ALL models AND Claude agree
-8. User review period: request changes or run additional cycles
-9. Final converged document is output
+6. Claude synthesizes all feedback and revises the document
+7. Loop continues until ALL models AND Claude agree (max 10 rounds)
+8. User review: accept, request changes, or run additional debate cycles
+9. Final converged document output
 
 ## Requirements
 
 - Python 3.10+
-- `litellm` package: `pip install litellm`
+- `pip install litellm` (required)
+- `pip install azure-ai-inference` (optional, for Azure AI Foundry)
 - API key for at least one LLM provider
 
-## Supported Models
+## Supported Providers
 
-| Provider   | Env Var                | Example Models                               |
-|------------|------------------------|----------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.4`, `gpt-5.4-pro`, `o3`, `o4-mini`   |
-| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
-| Google     | `GEMINI_API_KEY`       | `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4-0709`, `xai/grok-4-1-fast-reasoning` |
-| Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
-| Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral` |
-| Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`               |
-| OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.2-pro`, `openrouter/anthropic/claude-opus-4.6` |
-| Codex CLI  | ChatGPT subscription   | `codex/gpt-5.3-codex`, `codex/gpt-5.2-codex` |
-| Gemini CLI | Google account         | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
-| Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-chat`                     |
-| Zhipu      | `ZHIPUAI_API_KEY`      | `zhipu/glm-4`, `zhipu/glm-4-plus`            |
+| Provider | Env Var | Example Models |
+|----------|---------|----------------|
+| OpenAI | `OPENAI_API_KEY` | `gpt-5.4`, `gpt-5.4-pro`, `o3`, `o4-mini` |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
+| Google | `GEMINI_API_KEY` | `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
+| xAI | `XAI_API_KEY` | `xai/grok-4-1-fast`, `xai/grok-4-0709` |
+| Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/<your-deployment>` |
+| OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.2-pro`, `openrouter/anthropic/claude-opus-4.6` |
+| Mistral | `MISTRAL_API_KEY` | `mistral/mistral-large`, `mistral/codestral` |
+| Groq | `GROQ_API_KEY` | `groq/llama-3.3-70b-versatile` |
+| Deepseek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-chat` |
+| Codex CLI | ChatGPT subscription | `codex/gpt-5.3-codex` |
+| Gemini CLI | Google account | `gemini-cli/gemini-3.1-pro-preview` |
 
-Check which keys are configured:
+**Model costs are dynamic** via LiteLLM's community-maintained registry -- no hardcoded pricing to go stale.
+
+Check configured providers and test connectivity:
 
 ```bash
 cd skills/spec-debate/scripts
 python3 debate.py providers
-```
-
-## AWS Bedrock Support
-
-For enterprise users who need to route all model calls through AWS Bedrock:
-
-```bash
-cd skills/spec-debate/scripts
-python3 debate.py bedrock enable --region us-east-1
-python3 debate.py bedrock add-model claude-sonnet-4.6
-python3 debate.py bedrock status
-```
-
-When Bedrock is enabled, **all model calls route through Bedrock** - no direct API calls are made. Configuration is stored at `~/.claude/spec-debate/config.json`.
-
-## OpenRouter Support
-
-[OpenRouter](https://openrouter.ai) provides unified access to multiple LLM providers through a single API:
-
-```bash
-export OPENROUTER_API_KEY="sk-or-..."
-python3 debate.py critique --models openrouter/openai/gpt-5.2-pro,openrouter/anthropic/claude-opus-4.6 < spec.md
-```
-
-## Codex CLI Support
-
-[Codex CLI](https://github.com/openai/codex) allows ChatGPT Pro subscribers to use OpenAI models without separate API credits:
-
-```bash
-npm install -g @openai/codex
-python3 debate.py critique --models codex/gpt-5.3-codex,gemini/gemini-2.5-flash < spec.md
-```
-
-## Gemini CLI Support
-
-[Gemini CLI](https://github.com/google-gemini/gemini-cli) allows Google account holders to use Gemini models without API credits:
-
-```bash
-npm install -g @google/gemini-cli && gemini auth
-python3 debate.py critique --models gemini-cli/gemini-3.1-pro-preview < spec.md
-```
-
-## Usage
-
-**Start from scratch:**
-
-```
-/spec-debate "Build a rate limiter service with Redis backend"
-```
-
-**Refine an existing document:**
-
-```
-/spec-debate ./docs/my-spec.md
+python3 debate.py test
+python3 debate.py test --models gpt-5.4,foundry/gpt-5-mini
 ```
 
 ## Document Types
 
-- **PRD** (Product Requirements Document) - Business/product focus for stakeholders and PMs
-- **Technical Specification** - Engineering focus for developers and architects
+- **PRD** (Product Requirements Document) -- business/product focus with personas, user stories, KPIs, scope, and risks
+- **Tech Spec** (Technical Specification) -- engineering focus with architecture, APIs, data models, security, and deployment
 
-## Core Features
+## Features
 
-- **Interview Mode** - In-depth requirements gathering before the debate
-- **Claude's Active Participation** - Independent critiques alongside external models
-- **Early Agreement Verification** - Anti-laziness checks for models that agree too quickly
-- **User Review Period** - Accept, request changes, or run additional cycles
-- **PRD to Tech Spec Flow** - Continue from PRD directly into a technical specification
+### Core
+- **Multi-LLM adversarial debate** -- 2+ models critique in parallel until consensus
+- **Claude's active participation** -- independent critiques, not just orchestration
+- **Anti-laziness checks** -- presses models that agree too quickly
+- **Interview mode** -- in-depth requirements gathering before drafting
+- **User review period** -- accept, request changes, or run additional cycles
+- **PRD to tech spec flow** -- continue from PRD directly into a technical specification
 
-## Advanced Features
+### Advanced
+- **Focus modes** -- direct critique toward specific concerns: `security`, `scalability`, `performance`, `ux`, `reliability`, `cost`
+- **Model personas** -- shift perspective: `security-engineer`, `oncall-engineer`, `junior-developer`, `qa-engineer`, `site-reliability`, `product-manager`, `data-engineer`, `mobile-developer`, `accessibility-specialist`, `legal-compliance`, or custom
+- **Context injection** -- include existing docs: `--context ./api.md --context ./schema.sql`
+- **Session persistence** -- resume interrupted debates: `--session my-spec` / `--resume my-spec`
+- **Auto-checkpointing** -- per-round spec snapshots for rollback
+- **Preserve intent mode** -- require justification for any section removals
+- **Cost tracking** -- per-round token usage and estimated cost via LiteLLM registry
+- **Saved profiles** -- reuse model/focus/persona configs across debates
+- **Diff between rounds** -- unified diff showing what changed
+- **Export to task list** -- convert specs to structured tasks (JSON)
+- **Telegram integration** -- real-time notifications and human-in-the-loop feedback
 
-- **Focus Modes**: `--focus security|scalability|performance|ux|reliability|cost`
-- **Model Personas**: `--persona security-engineer|oncall-engineer|junior-developer|...`
-- **Context Injection**: `--context ./existing-api.md --context ./schema.sql`
-- **Session Persistence**: `--session my-spec` / `--resume my-spec`
-- **Preserve Intent Mode**: `--preserve-intent` (require justification for removals)
-- **Cost Tracking**: Per-round token usage and estimated cost
-- **Saved Profiles**: `save-profile` / `--profile`
-- **Diff Between Rounds**: `diff --previous old.md --current new.md`
-- **Export to Task List**: `export-tasks --doc-type prd [--json]`
-- **Telegram Integration**: Real-time notifications and human-in-the-loop feedback
+### Enterprise
+- **AWS Bedrock routing** -- route all calls through Bedrock with friendly model names
+- **Azure AI Foundry v2** -- native SDK integration for Foundry-deployed models
+- **OpenRouter** -- unified access to 100+ models with a single key
 
 ## CLI Reference
 
 ```bash
-debate.py critique --models MODEL_LIST --doc-type TYPE [OPTIONS] < spec.md
-debate.py critique --resume SESSION_ID
-debate.py diff --previous OLD.md --current NEW.md
-debate.py export-tasks --models MODEL --doc-type TYPE [--json] < spec.md
-debate.py providers | focus-areas | personas | profiles | sessions
-debate.py save-profile NAME --models ... [--focus ...] [--persona ...]
+# Core commands
+python3 debate.py critique --models MODEL_LIST --doc-type TYPE [OPTIONS] < spec.md
+python3 debate.py critique --resume SESSION_ID
+
+# Test and diagnostics
+python3 debate.py test                        # Ping all configured providers
+python3 debate.py test --models gpt-5.4       # Test specific models
+python3 debate.py providers                   # Show provider status
+
+# Utilities
+python3 debate.py diff --previous OLD.md --current NEW.md
+python3 debate.py export-tasks --models MODEL --doc-type TYPE [--json] < spec.md
+python3 debate.py focus-areas
+python3 debate.py personas
+python3 debate.py profiles
+python3 debate.py sessions
+python3 debate.py save-profile NAME --models ... [--focus ...] [--persona ...]
+
+# Bedrock management
+python3 debate.py bedrock enable --region us-east-1
+python3 debate.py bedrock add-model claude-sonnet-4.6
+python3 debate.py bedrock status
+python3 debate.py bedrock list-models
 ```
 
 ## File Structure
 
 ```
 spec-debate/
+├── .claude-plugin/
+│   └── plugin.json            # Plugin metadata
+├── skills/
+│   └── spec-debate/
+│       ├── SKILL.md            # Claude skill definition
+│       └── scripts/
+│           ├── debate.py       # Main orchestrator + CLI
+│           ├── models.py       # LLM calls, cost tracking, parallel execution
+│           ├── prompts.py      # System prompts + critique templates
+│           ├── providers.py    # Provider config, Bedrock, profiles
+│           ├── session.py      # State persistence + checkpointing
+│           └── telegram_bot.py # Telegram notifications (optional)
 ├── README.md
 ├── LICENSE
-├── requirements.txt
-└── skills/
-    └── spec-debate/
-        ├── SKILL.md
-        └── scripts/
-            ├── debate.py
-            ├── models.py
-            ├── prompts.py
-            ├── providers.py
-            ├── session.py
-            └── telegram_bot.py
+└── requirements.txt
 ```
 
 ## License
 
-MIT - See [LICENSE](LICENSE) for details.
+MIT -- See [LICENSE](LICENSE) for details.
 
 Original work Copyright (c) Zak Cole.
 Modifications Copyright (c) Hugh McIntyre.
