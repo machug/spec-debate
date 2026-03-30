@@ -740,9 +740,9 @@ def call_single_model(
             }
 
             if is_reasoning_model(actual_model):
-                completion_kwargs["max_completion_tokens"] = 8000
+                completion_kwargs["max_completion_tokens"] = 16000
             else:
-                completion_kwargs["max_tokens"] = 8000
+                completion_kwargs["max_tokens"] = 16000
                 completion_kwargs["temperature"] = 0.7
 
             response = completion(**completion_kwargs)

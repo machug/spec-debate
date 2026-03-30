@@ -256,9 +256,6 @@ def add_core_arguments(parser: argparse.ArgumentParser) -> None:
 def add_output_arguments(parser: argparse.ArgumentParser) -> None:
     """Add output formatting arguments to parser."""
     parser.add_argument("--json", "-j", action="store_true", help="Output as JSON")
-    parser.add_argument(
-        "--show-cost", action="store_true", help="Show cost summary after critique"
-    )
 
 
 def add_telegram_arguments(parser: argparse.ArgumentParser) -> None:
@@ -801,14 +798,18 @@ def handle_export_tasks(args: argparse.Namespace, models: list[str]) -> None:
         }
 
         if is_reasoning_model(models[0]):
-            completion_kwargs["max_completion_tokens"] = 8000
+            completion_kwargs["max_completion_tokens"] = 16000
         else:
-            completion_kwargs["max_tokens"] = 8000
+            completion_kwargs["max_tokens"] = 16000
             completion_kwargs["temperature"] = 0.3
 
         response = completion(**completion_kwargs)
         content = response.choices[0].message.content
         tasks = extract_tasks(content)
+
+        input_tokens = response.usage.prompt_tokens if response.usage else 0
+        output_tokens = response.usage.completion_tokens if response.usage else 0
+        cost_tracker.add(models[0], input_tokens, output_tokens)
 
         if args.json:
             print(json.dumps({"tasks": tasks}, indent=2))
@@ -825,6 +826,8 @@ def handle_export_tasks(args: argparse.Namespace, models: list[str]) -> None:
                         f"   Acceptance criteria: {len(task['acceptance_criteria'])} items"
                     )
                 print()
+
+        print(cost_tracker.summary())
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -1063,8 +1066,7 @@ def output_results(
             print("=== User Feedback ===")
             print(user_feedback)
 
-        if args.show_cost:
-            print(cost_tracker.summary())
+        print(cost_tracker.summary())
 
 
 def validate_models_before_run(models: list[str], bedrock_mode: bool) -> None:
