@@ -32,7 +32,7 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
           ║                                                  ║
           ║  Skill.......: spec-debate                       ║
           ║  Author......: machug          (hughtec.com)     ║
-          ║  Version.....: 1.1.3                             ║
+          ║  Version.....: 1.1.4                             ║
           ║  Origin......: fork of zscole/adversarial-spec   ║
           ║  Released....: 2026                              ║
           ║  License.....: MIT                               ║
