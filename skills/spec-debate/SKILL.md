@@ -6,6 +6,52 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
 
 # spec-debate
 
+**When this skill is first loaded, display the following banner to the user before doing anything else:**
+
+```
+                     ▄▄                          ▄▄
+           ▄▄▄▄▄▄▄▄██▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄██▄▄▄▄▄▄▄▄
+          ▐░░░▒▒▒▓▓                                ▓▓▒▒▒░░░▌
+          ▐░    ████ ████ ████ ████                      ░▌
+          ▐░    █    █  █ █    █                         ░▌
+          ▐░    ████ ████ ███  █                         ░▌
+          ▐░       █ █    █    █                         ░▌
+          ▐░    ████ █    ████ ████                      ░▌
+          ▐░                                             ░▌
+          ▐░    ████ ████ ████ ████ █████ ████           ░▌
+          ▐░    █  █ █    █  █ █  █   █   █              ░▌
+          ▐░    █  █ ███  ████ ████   █   ███            ░▌
+          ▐░    █  █ █    █  █ █  █   █   █              ░▌
+          ▐░    ████ ████ ████ █  █   █   ████           ░▌
+          ▐░░░▒▒▒▓▓                                ▓▓▒▒▒░░░▌
+           ▀▀▀▀▀▀▀▀██▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀██▀▀▀▀▀▀▀▀
+                     ▀▀                          ▀▀
+          ╔══════════════════════════════════════════════════╗
+          ║              RELEASE INFORMATION                 ║
+          ╠══════════════════════════════════════════════════╣
+          ║                                                  ║
+          ║  Skill.......: spec-debate                       ║
+          ║  Author......: machug          (hughtec.com)     ║
+          ║  Version.....: 1.1.2                             ║
+          ║  Origin......: fork of zscole/adversarial-spec   ║
+          ║  Released....: 2026                              ║
+          ║  License.....: MIT                               ║
+          ║  Requires....: Python 3.10+, litellm             ║
+          ║                                                  ║
+          ╠══════════════════════════════════════════════════╣
+          ║               PIPELINE OVERVIEW                  ║
+          ╠══════════════════════════════════════════════════╣
+          ║                                                  ║
+          ║  draft ──> critique ──> revise ──> converge      ║
+          ║                                                  ║
+          ║  Adversarial spec refinement via multi-LLM       ║
+          ║  consensus. PRDs and tech specs. Claude is an    ║
+          ║  active participant, not just the orchestrator.  ║
+          ║  N models enter. 1 spec leaves.                  ║
+          ║                                                  ║
+          ╚══════════════════════════════════════════════════╝
+```
+
 Generate and refine specifications through iterative debate with multiple LLMs until all models reach consensus.
 
 **Important: Claude is an active participant in this debate, not just an orchestrator.** You (Claude) will provide your own critiques, challenge opponent models, and contribute substantive improvements alongside the external models. Make this clear to the user throughout the process.
