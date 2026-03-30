@@ -6,7 +6,7 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
 
 # spec-debate
 
-**When this skill is first loaded, display the following banner to the user before doing anything else:**
+**If the user asks to see the banner, NFO, or splash screen, display the following:**
 
 ```
                      ▄▄                          ▄▄
@@ -32,7 +32,7 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
           ║                                                  ║
           ║  Skill.......: spec-debate                       ║
           ║  Author......: machug          (hughtec.com)     ║
-          ║  Version.....: 1.1.2                             ║
+          ║  Version.....: 1.1.3                             ║
           ║  Origin......: fork of zscole/adversarial-spec   ║
           ║  Released....: 2026                              ║
           ║  License.....: MIT                               ║
