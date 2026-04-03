@@ -292,8 +292,8 @@ def list_providers():
             "ANTHROPIC_API_KEY",
             "claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5",
         ),
-        ("Google", "GEMINI_API_KEY", "gemini/gemini-2.5-pro, gemini/gemini-2.5-flash"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4-0709, xai/grok-4-1-fast-reasoning"),
+        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-2.5-flash"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning"),
         (
             "Azure AI Foundry",
             "AZURE_AI_API_KEY",
@@ -384,8 +384,8 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
     providers = [
         ("OpenAI", "OPENAI_API_KEY", "gpt-5.4"),
         ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-4-6"),
-        ("Google", "GEMINI_API_KEY", "gemini/gemini-2.5-flash"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4-0709"),
+        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.20-0309-reasoning"),
         # Azure AI Foundry skipped — deployment names are user-specific; use: test --models foundry/<name>
         ("Mistral", "MISTRAL_API_KEY", "mistral/mistral-large"),
         ("Groq", "GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),

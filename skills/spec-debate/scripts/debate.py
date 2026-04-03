@@ -5,8 +5,8 @@ Sends specs to multiple LLMs for critique using LiteLLM.
 
 Usage:
     echo "spec" | python3 debate.py critique --models gpt-5.4
-    echo "spec" | python3 debate.py critique --models gpt-5.4,gemini/gemini-2.5-flash,xai/grok-4-0709 --doc-type prd
-    echo "spec" | python3 debate.py critique --models codex/gpt-5.3-codex,gemini/gemini-2.5-flash --doc-type tech
+    echo "spec" | python3 debate.py critique --models gpt-5.4,gemini/gemini-3.1-pro-preview,xai/grok-4.20-0309-reasoning --doc-type prd
+    echo "spec" | python3 debate.py critique --models codex/gpt-5.3-codex,gemini/gemini-3.1-pro-preview --doc-type tech
     echo "spec" | python3 debate.py critique --models gpt-5.4 --focus security
     echo "spec" | python3 debate.py critique --models gpt-5.4 --persona "security engineer"
     echo "spec" | python3 debate.py critique --models gpt-5.4 --context ./api.md --context ./schema.sql
@@ -23,8 +23,8 @@ Usage:
 Supported providers (set corresponding API key):
     OpenAI:     OPENAI_API_KEY       models: gpt-5.4, gpt-5.4-pro, o3, o4-mini, etc.
     Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5, etc.
-    Google:     GEMINI_API_KEY       models: gemini/gemini-2.5-pro, gemini/gemini-2.5-flash, etc.
-    xAI:        XAI_API_KEY          models: xai/grok-4-0709, xai/grok-4-1-fast-reasoning, etc.
+    Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-3.1-pro-preview, etc.
+    xAI:        XAI_API_KEY          models: xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning, etc.
     Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-6, foundry/grok-4, foundry/Phi-4-reasoning, etc.
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
     Groq:       GROQ_API_KEY         models: groq/llama-3.3-70b, etc.
@@ -233,7 +233,7 @@ def add_core_arguments(parser: argparse.ArgumentParser) -> None:
         "--models",
         "-m",
         default=None,
-        help="Comma-separated list of models (e.g., gpt-5.4,gemini/gemini-2.5-flash,xai/grok-4-0709)",
+        help="Comma-separated list of models (e.g., gpt-5.4,gemini/gemini-3.1-pro-preview,xai/grok-4.20-0309-reasoning)",
     )
     parser.add_argument(
         "--doc-type",
@@ -383,7 +383,7 @@ Examples:
   python3 debate.py focus-areas
   python3 debate.py personas
   python3 debate.py profiles
-  python3 debate.py save-profile myprofile --models gpt-5.4,gemini/gemini-2.5-flash --focus security
+  python3 debate.py save-profile myprofile --models gpt-5.4,gemini/gemini-3.1-pro-preview --focus security
 
 Bedrock commands:
   python3 debate.py bedrock status                           # Show Bedrock config
@@ -667,10 +667,10 @@ def parse_models(args: argparse.Namespace) -> list[str]:
                 file=sys.stderr,
             )
             print(
-                "  Google:    Set GEMINI_API_KEY for gemini/gemini-2.5-flash, etc.",
+                "  Google:    Set GEMINI_API_KEY for gemini/gemini-3.1-pro-preview, etc.",
                 file=sys.stderr,
             )
-            print("  xAI:       Set XAI_API_KEY for xai/grok-4-0709, xai/grok-4-1-fast-reasoning, etc.", file=sys.stderr)
+            print("  xAI:       Set XAI_API_KEY for xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning, etc.", file=sys.stderr)
             print("  Azure AI:  Set AZURE_AI_API_KEY for foundry/claude-opus-4-6, etc.", file=sys.stderr)
             print(
                 "  Mistral:   Set MISTRAL_API_KEY for mistral/mistral-large, etc.",

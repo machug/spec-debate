@@ -83,9 +83,9 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 |----------|---------|----------------|
 | OpenAI | `OPENAI_API_KEY` | `gpt-5.4`, `gpt-5.4-pro`, `o3`, `o4-mini` |
 | Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-6`, `claude-sonnet-4-6` |
-| Google | `GEMINI_API_KEY` | `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
-| xAI | `XAI_API_KEY` | `xai/grok-4-0709`, `xai/grok-4-1-fast-reasoning` |
-| Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
+| Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.1-pro-preview` |
+| xAI | `XAI_API_KEY` | `xai/grok-4.20-0309-reasoning`, `xai/grok-4.20-0309-non-reasoning` |
+| Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-6`, `foundry/grok-4.20`, `foundry/Phi-4-reasoning` |
 | OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.2-pro` |
 | Mistral | `MISTRAL_API_KEY` | `mistral/mistral-large`, `mistral/codestral` |
 | Groq | `GROQ_API_KEY` | `groq/llama-3.3-70b-versatile` |
@@ -208,7 +208,7 @@ Total cost: $0.0847
 
 By model:
   gpt-5.4: $0.0523 (8,234 in / 2,100 out)
-  gemini/gemini-2.5-flash: $0.0324 (4,309 in / 1,121 out)
+  gemini/gemini-3.1-pro-preview: $0.0324 (4,309 in / 1,121 out)
 ```
 
 ### Saved Profiles
@@ -216,7 +216,7 @@ By model:
 Save frequently used configurations:
 
 ```bash
-python3 debate.py save-profile strict-security --models gpt-5.4,gemini/gemini-2.5-flash --focus security --doc-type tech
+python3 debate.py save-profile strict-security --models gpt-5.4,gemini/gemini-3.1-pro-preview --focus security --doc-type tech
 python3 debate.py critique --profile strict-security < spec.md
 python3 debate.py profiles
 ```

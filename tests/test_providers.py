@@ -57,13 +57,13 @@ class TestValidateModelCredentials:
 
     def test_gemini_valid(self, monkeypatch):
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
-        valid, invalid = validate_model_credentials(["gemini/gemini-2.5-flash"])
-        assert "gemini/gemini-2.5-flash" in valid
+        valid, invalid = validate_model_credentials(["gemini/gemini-3.1-pro-preview"])
+        assert "gemini/gemini-3.1-pro-preview" in valid
 
     def test_xai_valid(self, monkeypatch):
         monkeypatch.setenv("XAI_API_KEY", "xai-test")
-        valid, invalid = validate_model_credentials(["xai/grok-4-1-fast"])
-        assert "xai/grok-4-1-fast" in valid
+        valid, invalid = validate_model_credentials(["xai/grok-4.20-0309-reasoning"])
+        assert "xai/grok-4.20-0309-reasoning" in valid
 
     def test_foundry_valid_with_key(self, monkeypatch):
         monkeypatch.setenv("AZURE_AI_API_KEY", "test-key")

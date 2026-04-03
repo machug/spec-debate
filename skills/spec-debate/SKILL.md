@@ -69,9 +69,9 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 |------------|------------------------|---------------------------------------------|
 | OpenAI     | `OPENAI_API_KEY`       | `gpt-5.4`, `gpt-5.4-pro`, `o3`, `o4-mini` |
 | Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
-| Google     | `GEMINI_API_KEY`       | `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4-0709`, `xai/grok-4-1-fast-reasoning` |
-| Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
+| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.1-pro-preview` |
+| xAI        | `XAI_API_KEY`          | `xai/grok-4.20-0309-reasoning`, `xai/grok-4.20-0309-non-reasoning` |
+| Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-6`, `foundry/grok-4.20`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
 | OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.2-pro`, `openrouter/anthropic/claude-opus-4.6` |
@@ -83,7 +83,7 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 
 **Azure AI Foundry Setup:**
 - Set `AZURE_AI_API_KEY` and `AZURE_AI_API_BASE` (your Foundry endpoint URL)
-- Models use `foundry/` prefix: `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning`, `foundry/deepseek-r1`
+- Models use `foundry/` prefix: `foundry/claude-opus-4-6`, `foundry/grok-4.20`, `foundry/Phi-4-reasoning`, `foundry/deepseek-r1`
 - Supports Claude, Grok, Llama, Phi, DeepSeek, Cohere, and more via the Foundry model catalog
 
 **Codex CLI Setup:**
@@ -375,16 +375,16 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `claude-opus-4-6` - Claude Opus 4.6, highest capability
 
 **If GEMINI_API_KEY is set, include:**
-- `gemini/gemini-2.5-flash` - Fast, good balance
-- `gemini/gemini-2.5-pro` - Stronger reasoning
+- `gemini/gemini-3.1-pro-preview` - Fast, good balance
+- `gemini/gemini-3.1-pro-preview` - Stronger reasoning
 
 **If XAI_API_KEY is set, include:**
-- `xai/grok-4-0709` - Latest Grok
-- `xai/grok-4-1-fast-reasoning` - Fast reasoning variant
+- `xai/grok-4.20-0309-reasoning` - Latest Grok
+- `xai/grok-4.20-0309-non-reasoning` - Fast reasoning variant
 
 **If AZURE_AI_API_KEY is set, include:**
 - `foundry/claude-opus-4-6` - Claude via Azure Foundry
-- `foundry/grok-4` - Grok via Azure Foundry
+- `foundry/grok-4.20` - Grok via Azure Foundry
 - `foundry/Phi-4-reasoning` - Microsoft Phi-4 reasoning
 
 **If MISTRAL_API_KEY is set, include:**
@@ -850,7 +850,7 @@ Total cost: $0.0847
 
 By model:
   gpt-5.4: $0.0523 (8,234 in / 2,100 out)
-  gemini/gemini-2.5-flash: $0.0324 (4,309 in / 1,121 out)
+  gemini/gemini-3.1-pro-preview: $0.0324 (4,309 in / 1,121 out)
 ```
 
 Cost is also included in JSON output and Telegram notifications.
@@ -861,7 +861,7 @@ Save frequently used configurations as profiles:
 
 **Create a profile:**
 ```bash
-python3 debate.py save-profile strict-security --models gpt-5.4,gemini/gemini-2.5-flash --focus security --doc-type tech
+python3 debate.py save-profile strict-security --models gpt-5.4,gemini/gemini-3.1-pro-preview --focus security --doc-type tech
 ```
 
 **Use a profile:**

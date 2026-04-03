@@ -48,8 +48,8 @@ class TestIsReasoningModel:
     def test_regular_models_are_not_reasoning(self):
         assert not is_reasoning_model("claude-opus-4-6")
         assert not is_reasoning_model("claude-sonnet-4-6")
-        assert not is_reasoning_model("gemini/gemini-2.5-flash")
-        assert not is_reasoning_model("xai/grok-4-1-fast")
+        assert not is_reasoning_model("gemini/gemini-3.1-pro-preview")
+        assert not is_reasoning_model("xai/grok-4.20-0309-non-reasoning")
         assert not is_reasoning_model("mistral/mistral-large")
 
     def test_case_insensitive(self):
