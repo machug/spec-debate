@@ -286,14 +286,14 @@ def list_providers():
         print("-" * 60 + "\n")
 
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.4, gpt-5.4-pro, o3, o4-mini"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-5.4, gpt-5.4-pro, gpt-5.4-mini, o3-pro, o4-mini"),
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
             "claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5",
         ),
-        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-2.5-flash"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning"),
+        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-2.5-pro, gemini/gemini-2.5-flash"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4-1-fast-reasoning, xai/grok-4-1-fast-non-reasoning, xai/grok-4-0709"),
         (
             "Azure AI Foundry",
             "AZURE_AI_API_KEY",
@@ -308,7 +308,7 @@ def list_providers():
             "openrouter/openai/gpt-5.2-pro, openrouter/anthropic/claude-opus-4.6",
         ),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat"),
-        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5, zai/glm-4.7, zai/glm-4.5"),
+        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.1, zai/glm-5-turbo, zai/glm-5"),
         ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.5, moonshot/kimi-k2-thinking"),
     ]
 
@@ -385,13 +385,13 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
         ("OpenAI", "OPENAI_API_KEY", "gpt-5.4"),
         ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-4-6"),
         ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.20-0309-reasoning"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4-1-fast-reasoning"),
         # Azure AI Foundry skipped — deployment names are user-specific; use: test --models foundry/<name>
         ("Mistral", "MISTRAL_API_KEY", "mistral/mistral-large"),
         ("Groq", "GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),
         ("OpenRouter", "OPENROUTER_API_KEY", "openrouter/openai/gpt-5.2-pro"),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat"),
-        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5"),
+        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.1"),
         ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.5"),
     ]
 
@@ -509,6 +509,166 @@ def validate_model_credentials(models: list[str]) -> tuple[list[str], list[str]]
             invalid.append(model)
 
     return valid, invalid
+
+
+def discover_models() -> dict[str, list[str]]:
+    """Query provider APIs to discover currently available models.
+
+    Returns:
+        Dict mapping provider name to list of available model IDs.
+    """
+    import json as _json
+    import urllib.request
+
+    results: dict[str, list[str]] = {}
+
+    # OpenAI
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                "https://api.openai.com/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            models = sorted(
+                m["id"]
+                for m in data["data"]
+                if any(
+                    k in m["id"]
+                    for k in ("gpt-4.1", "gpt-5", "o1", "o3", "o4")
+                )
+                and not any(
+                    k in m["id"]
+                    for k in ("audio", "realtime", "tts", "transcribe", "search", "image", "embed")
+                )
+            )
+            results["OpenAI"] = models
+        except Exception as e:
+            results["OpenAI"] = [f"[error: {e}]"]
+
+    # Google Gemini
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            models = sorted(
+                m["name"].replace("models/", "")
+                for m in data["models"]
+                if any(
+                    k in m["name"]
+                    for k in ("gemini-2.5", "gemini-3", "gemini-pro", "gemini-flash")
+                )
+                and "tts" not in m["name"]
+                and "image" not in m["name"]
+                and "audio" not in m["name"]
+                and "live" not in m["name"]
+            )
+            results["Google Gemini"] = [f"gemini/{m}" for m in models]
+        except Exception as e:
+            results["Google Gemini"] = [f"[error: {e}]"]
+
+    # xAI / Grok
+    api_key = os.environ.get("XAI_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                "https://api.x.ai/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            models = sorted(
+                m["id"]
+                for m in data["data"]
+                if "grok" in m["id"]
+                and "image" not in m["id"]
+                and "video" not in m["id"]
+            )
+            results["xAI (Grok)"] = [f"xai/{m}" for m in models]
+        except Exception as e:
+            results["xAI (Grok)"] = [f"[error: {e}]"]
+
+    # ZAI / GLM
+    api_key = os.environ.get("ZAI_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                "https://open.bigmodel.cn/api/paas/v4/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            models = sorted(m["id"] for m in data["data"] if "glm" in m["id"])
+            results["ZAI (GLM)"] = [f"zai/{m}" for m in models]
+        except Exception as e:
+            results["ZAI (GLM)"] = [f"[error: {e}]"]
+
+    # Anthropic — no list models endpoint, show known models
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        results["Anthropic"] = [
+            "claude-opus-4-6",
+            "claude-sonnet-4-6",
+            "claude-haiku-4-5",
+            "claude-opus-4",
+            "claude-sonnet-4",
+        ]
+
+    # Mistral
+    api_key = os.environ.get("MISTRAL_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                "https://api.mistral.ai/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            models = sorted(
+                m["id"]
+                for m in data["data"]
+                if any(k in m["id"] for k in ("mistral-large", "mistral-medium", "codestral", "ministral"))
+            )
+            results["Mistral"] = [f"mistral/{m}" for m in models]
+        except Exception as e:
+            results["Mistral"] = [f"[error: {e}]"]
+
+    # Groq
+    api_key = os.environ.get("GROQ_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                "https://api.groq.com/openai/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            models = sorted(m["id"] for m in data["data"])
+            results["Groq"] = [f"groq/{m}" for m in models]
+        except Exception as e:
+            results["Groq"] = [f"[error: {e}]"]
+
+    # Deepseek
+    api_key = os.environ.get("DEEPSEEK_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                "https://api.deepseek.com/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            models = sorted(m["id"] for m in data["data"])
+            results["Deepseek"] = [f"deepseek/{m}" for m in models]
+        except Exception as e:
+            results["Deepseek"] = [f"[error: {e}]"]
+
+    return results
 
 
 def handle_bedrock_command(subcommand: str, arg: Optional[str], region: Optional[str]):

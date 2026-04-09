@@ -49,8 +49,16 @@ class TestIsReasoningModel:
         assert not is_reasoning_model("claude-opus-4-6")
         assert not is_reasoning_model("claude-sonnet-4-6")
         assert not is_reasoning_model("gemini/gemini-3.1-pro-preview")
+        assert not is_reasoning_model("xai/grok-4-1-fast-non-reasoning")
         assert not is_reasoning_model("xai/grok-4.20-0309-non-reasoning")
         assert not is_reasoning_model("mistral/mistral-large")
+
+    def test_xai_reasoning_models(self):
+        assert is_reasoning_model("xai/grok-4-1-fast-reasoning")
+        assert is_reasoning_model("xai/grok-4-fast-reasoning")
+        assert is_reasoning_model("xai/grok-4.20-0309-reasoning")
+        assert not is_reasoning_model("xai/grok-4-0709")
+        assert not is_reasoning_model("xai/grok-4-1-fast-non-reasoning")
 
     def test_case_insensitive(self):
         assert is_reasoning_model("GPT-5.4")

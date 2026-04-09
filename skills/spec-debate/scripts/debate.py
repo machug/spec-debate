@@ -21,20 +21,22 @@ Usage:
     python3 debate.py sessions
 
 Supported providers (set corresponding API key):
-    OpenAI:     OPENAI_API_KEY       models: gpt-5.4, gpt-5.4-pro, o3, o4-mini, etc.
+    OpenAI:     OPENAI_API_KEY       models: gpt-5.4, gpt-5.4-pro, gpt-5.4-mini, o3-pro, o4-mini, etc.
     Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5, etc.
-    Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-3.1-pro-preview, etc.
-    xAI:        XAI_API_KEY          models: xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning, etc.
+    Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-2.5-pro, gemini/gemini-2.5-flash, etc.
+    xAI:        XAI_API_KEY          models: xai/grok-4-1-fast-reasoning, xai/grok-4-1-fast-non-reasoning, xai/grok-4-0709, etc.
     Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-6, foundry/grok-4, foundry/Phi-4-reasoning, etc.
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
     Groq:       GROQ_API_KEY         models: groq/llama-3.3-70b, etc.
     OpenRouter: OPENROUTER_API_KEY   models: openrouter/openai/gpt-5.2-pro, openrouter/anthropic/claude-opus-4.6, etc.
     Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-chat, etc.
-    ZAI (GLM):  ZAI_API_KEY          models: zai/glm-5, zai/glm-4.7, etc.
+    ZAI (GLM):  ZAI_API_KEY          models: zai/glm-5.1, zai/glm-5-turbo, zai/glm-5, etc.
     Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.5, moonshot/kimi-k2-thinking, etc.
     Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.3-codex, codex/gpt-5.2-codex
                 Install: npm install -g @openai/codex && codex login
                 Reasoning: --codex-reasoning xhigh (minimal, low, medium, high, xhigh)
+
+    Run 'python3 debate.py discover-models' to query APIs for the latest available models.
 
 Document types:
     prd   - Product Requirements Document (business/product focus)
@@ -81,10 +83,12 @@ from models import (  # noqa: E402
     get_critique_summary,
     is_reasoning_model,
     load_context_files,
+    uses_max_completion_tokens,
 )
 from prompts import EXPORT_TASKS_PROMPT, get_doc_type_name  # noqa: E402
 from providers import (  # noqa: E402
     DEFAULT_CODEX_REASONING,
+    discover_models,
     get_available_providers,
     get_bedrock_config,
     get_default_model,
@@ -405,6 +409,7 @@ Document types:
         choices=[
             "critique",
             "providers",
+            "discover-models",
             "test",
             "send-final",
             "diff",
@@ -469,14 +474,14 @@ def handle_test_command(args: argparse.Namespace) -> bool:
             if model.startswith("codex/"):
                 response, inp, out = call_codex_model(
                     "You are a test assistant.",
-                    "Reply with exactly: PING OK",
+                    "Say hello in one word",
                     model,
                     timeout=30,
                 )
             elif model.startswith("gemini-cli/"):
                 response, inp, out = call_gemini_cli_model(
                     "You are a test assistant.",
-                    "Reply with exactly: PING OK",
+                    "Say hello in one word",
                     model,
                     timeout=30,
                 )
@@ -484,7 +489,7 @@ def handle_test_command(args: argparse.Namespace) -> bool:
                 from models import call_foundry_model
                 response, inp, out = call_foundry_model(
                     "You are a test assistant.",
-                    "Reply with exactly: PING OK",
+                    "Say hello in one word",
                     model,
                     timeout=30,
                 )
@@ -493,13 +498,14 @@ def handle_test_command(args: argparse.Namespace) -> bool:
 
                 kwargs = {
                     "model": model,
-                    "messages": [{"role": "user", "content": "Reply with exactly: PING OK"}],
+                    "messages": [{"role": "user", "content": "Say hello in one word"}],
                     "timeout": 30,
                 }
-                if is_reasoning_model(model):
+                if uses_max_completion_tokens(model):
                     kwargs["max_completion_tokens"] = 20
                 else:
                     kwargs["max_tokens"] = 20
+                if not is_reasoning_model(model):
                     kwargs["temperature"] = 0.0
 
                 resp = litellm.completion(**kwargs)
@@ -530,6 +536,20 @@ def handle_info_command(args: argparse.Namespace) -> bool:
     """
     if args.action == "providers":
         list_providers()
+        return True
+
+    if args.action == "discover-models":
+        print("Querying provider APIs for available models...\n")
+        discovered = discover_models()
+        if not discovered:
+            print("No providers configured. Set API keys first.", file=sys.stderr)
+            print("Run 'python3 debate.py providers' to see options.", file=sys.stderr)
+        else:
+            for provider, models in discovered.items():
+                print(f"  {provider}:")
+                for m in models:
+                    print(f"    {m}")
+                print()
         return True
 
     if args.action == "test":

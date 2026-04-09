@@ -69,7 +69,24 @@ def is_reasoning_model(model: str) -> bool:
     # GPT-5 family: gpt-5, gpt-5.4, gpt-5-mini, gpt-5-nano, etc.
     if "gpt-5" in model_lower:
         return True
+    # xAI reasoning models: grok-*-reasoning but NOT *-non-reasoning
+    if "xai/" in model_lower and model_lower.endswith("-reasoning") and not model_lower.endswith("-non-reasoning"):
+        return True
     return False
+
+
+def uses_max_completion_tokens(model: str) -> bool:
+    """Check if a model uses max_completion_tokens instead of max_tokens.
+
+    Most reasoning models use max_completion_tokens, but xAI reasoning models
+    still use max_tokens (litellm doesn't support max_completion_tokens for xAI).
+    """
+    if not is_reasoning_model(model):
+        return False
+    # xAI uses max_tokens even for reasoning models
+    if model.lower().startswith("xai/"):
+        return False
+    return True
 
 
 @dataclass
@@ -739,10 +756,11 @@ def call_single_model(
                 "timeout": timeout,
             }
 
-            if is_reasoning_model(actual_model):
+            if uses_max_completion_tokens(actual_model):
                 completion_kwargs["max_completion_tokens"] = 16000
             else:
                 completion_kwargs["max_tokens"] = 16000
+            if not is_reasoning_model(actual_model):
                 completion_kwargs["temperature"] = 0.7
 
             response = completion(**completion_kwargs)

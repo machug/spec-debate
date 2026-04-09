@@ -67,23 +67,25 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.4`, `gpt-5.4-pro`, `o3`, `o4-mini` |
+| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `o3-pro`, `o4-mini` |
 | Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
-| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.1-pro-preview` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4.20-0309-reasoning`, `xai/grok-4.20-0309-non-reasoning` |
-| Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-6`, `foundry/grok-4.20`, `foundry/Phi-4-reasoning` |
+| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
+| xAI        | `XAI_API_KEY`          | `xai/grok-4-1-fast-reasoning`, `xai/grok-4-1-fast-non-reasoning`, `xai/grok-4-0709` |
+| Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
 | OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.2-pro`, `openrouter/anthropic/claude-opus-4.6` |
 | Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-chat`                    |
-| ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5`, `zai/glm-4.7`, `zai/glm-4.5`  |
+| ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.5`, `moonshot/kimi-k2-thinking` |
 | Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.3-codex`, `codex/gpt-5.2-codex` |
 | Gemini CLI | (Google account)       | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
 
+**Discover latest models:** Run `cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py discover-models` to query provider APIs for currently available models.
+
 **Azure AI Foundry Setup:**
 - Set `AZURE_AI_API_KEY` and `AZURE_AI_API_BASE` (your Foundry endpoint URL)
-- Models use `foundry/` prefix: `foundry/claude-opus-4-6`, `foundry/grok-4.20`, `foundry/Phi-4-reasoning`, `foundry/deepseek-r1`
+- Models use `foundry/` prefix: `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning`, `foundry/deepseek-r1`
 - Supports Claude, Grok, Llama, Phi, DeepSeek, Cohere, and more via the Foundry model catalog
 
 **Codex CLI Setup:**
@@ -357,34 +359,42 @@ Output format (whether loaded or generated):
 
 ### Step 2: Select Opponent Models
 
-First, check which API keys are configured:
+First, discover which models are actually available from configured providers:
 
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py discover-models
+```
+
+If `discover-models` fails or you need a quick check, fall back to:
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py providers
 ```
 
-Then present available models to the user using AskUserQuestion with multiSelect. Build the options list based on which API keys are set:
+Then present available models to the user using AskUserQuestion with multiSelect. Build the options list based on the discover-models output. If discover-models was not run, use these defaults per provider:
 
 **If OPENAI_API_KEY is set, include:**
 - `gpt-5.4` - Fast, good for general critique
 - `gpt-5.4-pro` - Stronger reasoning, slower
-- `o3` - Advanced reasoning
+- `gpt-5.4-mini` - Lightweight, cost-effective
+- `o3-pro` - Advanced reasoning
 
 **If ANTHROPIC_API_KEY is set, include:**
 - `claude-sonnet-4-6` - Claude Sonnet 4.6, excellent reasoning
 - `claude-opus-4-6` - Claude Opus 4.6, highest capability
 
 **If GEMINI_API_KEY is set, include:**
-- `gemini/gemini-3.1-pro-preview` - Fast, good balance
-- `gemini/gemini-3.1-pro-preview` - Stronger reasoning
+- `gemini/gemini-3.1-pro-preview` - Latest Gemini Pro
+- `gemini/gemini-2.5-pro` - Stable Gemini Pro
+- `gemini/gemini-2.5-flash` - Fast, cost-effective
 
 **If XAI_API_KEY is set, include:**
-- `xai/grok-4.20-0309-reasoning` - Latest Grok
-- `xai/grok-4.20-0309-non-reasoning` - Fast reasoning variant
+- `xai/grok-4-1-fast-reasoning` - Latest Grok with reasoning
+- `xai/grok-4-1-fast-non-reasoning` - Latest Grok, fast variant
+- `xai/grok-4-0709` - Grok 4
 
 **If AZURE_AI_API_KEY is set, include:**
 - `foundry/claude-opus-4-6` - Claude via Azure Foundry
-- `foundry/grok-4.20` - Grok via Azure Foundry
+- `foundry/grok-4` - Grok via Azure Foundry
 - `foundry/Phi-4-reasoning` - Microsoft Phi-4 reasoning
 
 **If MISTRAL_API_KEY is set, include:**
@@ -397,8 +407,9 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `deepseek/deepseek-chat` - Cost-effective
 
 **If ZAI_API_KEY is set, include:**
-- `zai/glm-5` - Latest GLM model
-- `zai/glm-4.7` - Strong reasoning
+- `zai/glm-5.1` - Latest GLM model
+- `zai/glm-5-turbo` - Fast GLM variant
+- `zai/glm-5` - Stable GLM
 
 **If MOONSHOT_API_KEY is set, include:**
 - `moonshot/kimi-k2.5` - Latest Kimi model
