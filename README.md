@@ -81,19 +81,21 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 
 | Provider | Env Var | Example Models |
 |----------|---------|----------------|
-| OpenAI | `OPENAI_API_KEY` | `gpt-5.4`, `gpt-5.4-pro`, `o3`, `o4-mini` |
+| OpenAI | `OPENAI_API_KEY` | `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `o3-pro`, `o4-mini` |
 | Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-6`, `claude-sonnet-4-6` |
-| Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.1-pro-preview` |
-| xAI | `XAI_API_KEY` | `xai/grok-4.20-0309-reasoning`, `xai/grok-4.20-0309-non-reasoning` |
-| Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-6`, `foundry/grok-4.20`, `foundry/Phi-4-reasoning` |
+| Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
+| xAI | `XAI_API_KEY` | `xai/grok-4-1-fast-reasoning`, `xai/grok-4-1-fast-non-reasoning`, `xai/grok-4-0709` |
+| Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.2-pro` |
 | Mistral | `MISTRAL_API_KEY` | `mistral/mistral-large`, `mistral/codestral` |
 | Groq | `GROQ_API_KEY` | `groq/llama-3.3-70b-versatile` |
 | Deepseek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-chat` |
-| ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5`, `zai/glm-4.7` |
+| ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.5`, `moonshot/kimi-k2-thinking` |
 | Codex CLI | ChatGPT subscription | `codex/gpt-5.3-codex` |
 | Gemini CLI | Google account | `gemini-cli/gemini-3.1-pro-preview` |
+
+Run `python3 debate.py discover-models` to query provider APIs for the latest available models.
 
 **No API key?** Install [Codex CLI](https://github.com/openai/codex) (`npm install -g @openai/codex`) or [Gemini CLI](https://github.com/google-gemini/gemini-cli) (`npm install -g @google/gemini-cli`) to use your existing ChatGPT or Google subscription.
 
@@ -261,6 +263,7 @@ python3 debate.py critique --resume SESSION_ID
 
 # Diagnostics
 python3 debate.py providers
+python3 debate.py discover-models
 python3 debate.py test
 python3 debate.py test --models gpt-5.4,foundry/gpt-5-mini
 
