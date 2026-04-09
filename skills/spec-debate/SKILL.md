@@ -70,7 +70,7 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 | OpenAI     | `OPENAI_API_KEY`       | `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `o3-pro`, `o4-mini` |
 | Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
 | Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4-1-fast-reasoning`, `xai/grok-4-1-fast-non-reasoning`, `xai/grok-4-0709` |
+| xAI        | `XAI_API_KEY`          | `xai/grok-4.20-0309-reasoning`, `xai/grok-4-1-fast-reasoning`, `xai/grok-4-0709` |
 | Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
@@ -388,9 +388,10 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `gemini/gemini-2.5-flash` - Fast, cost-effective
 
 **If XAI_API_KEY is set, include:**
-- `xai/grok-4-1-fast-reasoning` - Latest Grok with reasoning
-- `xai/grok-4-1-fast-non-reasoning` - Latest Grok, fast variant
-- `xai/grok-4-0709` - Grok 4
+- `xai/grok-4.20-0309-reasoning` - Flagship Grok with reasoning ($2/$6 per 1M)
+- `xai/grok-4.20-0309-non-reasoning` - Flagship Grok, no reasoning ($2/$6 per 1M)
+- `xai/grok-4-1-fast-reasoning` - Fast Grok with reasoning ($0.20/$0.50 per 1M)
+- `xai/grok-4-1-fast-non-reasoning` - Fast Grok, no reasoning ($0.20/$0.50 per 1M)
 
 **If AZURE_AI_API_KEY is set, include:**
 - `foundry/claude-opus-4-6` - Claude via Azure Foundry

@@ -24,7 +24,7 @@ Supported providers (set corresponding API key):
     OpenAI:     OPENAI_API_KEY       models: gpt-5.4, gpt-5.4-pro, gpt-5.4-mini, o3-pro, o4-mini, etc.
     Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5, etc.
     Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-2.5-pro, gemini/gemini-2.5-flash, etc.
-    xAI:        XAI_API_KEY          models: xai/grok-4-1-fast-reasoning, xai/grok-4-1-fast-non-reasoning, xai/grok-4-0709, etc.
+    xAI:        XAI_API_KEY          models: xai/grok-4.20-0309-reasoning, xai/grok-4-1-fast-reasoning, xai/grok-4-0709, etc.
     Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-6, foundry/grok-4, foundry/Phi-4-reasoning, etc.
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
     Groq:       GROQ_API_KEY         models: groq/llama-3.3-70b, etc.

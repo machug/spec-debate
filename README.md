@@ -84,7 +84,7 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 | OpenAI | `OPENAI_API_KEY` | `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `o3-pro`, `o4-mini` |
 | Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-6`, `claude-sonnet-4-6` |
 | Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
-| xAI | `XAI_API_KEY` | `xai/grok-4-1-fast-reasoning`, `xai/grok-4-1-fast-non-reasoning`, `xai/grok-4-0709` |
+| xAI | `XAI_API_KEY` | `xai/grok-4.20-0309-reasoning`, `xai/grok-4-1-fast-reasoning`, `xai/grok-4-0709` |
 | Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.2-pro` |
 | Mistral | `MISTRAL_API_KEY` | `mistral/mistral-large`, `mistral/codestral` |
