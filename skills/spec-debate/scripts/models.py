@@ -72,19 +72,22 @@ def is_reasoning_model(model: str) -> bool:
     # xAI reasoning models: grok-*-reasoning but NOT *-non-reasoning
     if "xai/" in model_lower and model_lower.endswith("-reasoning") and not model_lower.endswith("-non-reasoning"):
         return True
+    # Moonshot Kimi reasoning models (k2.5 rejects temperature, only allows 1)
+    if "moonshot/" in model_lower and "k2.5" in model_lower:
+        return True
     return False
 
 
 def uses_max_completion_tokens(model: str) -> bool:
     """Check if a model uses max_completion_tokens instead of max_tokens.
 
-    Most reasoning models use max_completion_tokens, but xAI reasoning models
-    still use max_tokens (litellm doesn't support max_completion_tokens for xAI).
+    Most reasoning models use max_completion_tokens, but some providers
+    still use max_tokens (litellm doesn't support max_completion_tokens for them).
     """
     if not is_reasoning_model(model):
         return False
-    # xAI uses max_tokens even for reasoning models
-    if model.lower().startswith("xai/"):
+    # xAI and Moonshot use max_tokens even for reasoning models
+    if model.lower().startswith(("xai/", "moonshot/")):
         return False
     return True
 
