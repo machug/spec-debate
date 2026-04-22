@@ -53,6 +53,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import warnings
 from datetime import datetime
@@ -85,7 +86,7 @@ from models import (  # noqa: E402
     load_context_files,
     uses_max_completion_tokens,
 )
-from prompts import EXPORT_TASKS_PROMPT, get_doc_type_name  # noqa: E402
+from prompts import EMIT_PLAN_PROMPT, EXPORT_TASKS_PROMPT, get_doc_type_name  # noqa: E402
 from providers import (  # noqa: E402
     DEFAULT_CODEX_REASONING,
     discover_models,
@@ -365,6 +366,32 @@ def add_misc_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_emit_plan_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add emit-plan arguments to parser."""
+    parser.add_argument(
+        "--spec",
+        help="Path to finalized spec (stdin used if omitted)",
+    )
+    parser.add_argument(
+        "--pr-label",
+        default="PR-1",
+        help="Label for this plan's PR (default: PR-1). Free-form; appears in the plan header.",
+    )
+    parser.add_argument(
+        "--pr-scope",
+        help="Short description of what this PR covers. If omitted, emit-plan will include a scope-inference instruction in the prompt and let the model derive it from the spec's deployment-strategy section.",
+    )
+    parser.add_argument(
+        "--title-hint",
+        default="",
+        help="Feature/project name to use in the plan title (default: derived from spec filename).",
+    )
+    parser.add_argument(
+        "--plan-out",
+        help="Path to write the emitted plan. Default: sibling of --spec with -<pr-label>.plan.md suffix, else ./<pr-label>.plan.md",
+    )
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser.
 
@@ -383,6 +410,8 @@ Examples:
   echo "spec" | python3 debate.py critique --profile my-security-profile
   python3 debate.py diff --previous old.md --current new.md
   echo "spec" | python3 debate.py export-tasks --doc-type prd
+  python3 debate.py detect-prs --spec spec-output.md
+  python3 debate.py emit-plan --spec spec-output.md --pr-label PR-1 --pr-scope "data engine + schemas" --models claude-opus-4-6
   python3 debate.py providers
   python3 debate.py focus-areas
   python3 debate.py personas
@@ -414,6 +443,8 @@ Document types:
             "send-final",
             "diff",
             "export-tasks",
+            "emit-plan",
+            "detect-prs",
             "focus-areas",
             "personas",
             "profiles",
@@ -440,6 +471,7 @@ Document types:
     add_codex_arguments(parser)
     add_bedrock_arguments(parser)
     add_misc_arguments(parser)
+    add_emit_plan_arguments(parser)
 
     return parser
 
@@ -632,6 +664,10 @@ def handle_utility_command(args: argparse.Namespace) -> bool:
         except OSError as e:
             print(f"Error reading files: {e}", file=sys.stderr)
             sys.exit(1)
+        return True
+
+    if args.action == "detect-prs":
+        handle_detect_prs(args)
         return True
 
     return False
@@ -848,6 +884,162 @@ def handle_export_tasks(args: argparse.Namespace, models: list[str]) -> None:
                 print()
 
         print(cost_tracker.summary())
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+_PR_PATTERN = re.compile(r"\bPR-(\d+)\b")
+_SPEC_STEM_SUFFIXES = (".spec-debate-final", ".spec", "-spec", "-final")
+
+EMIT_PLAN_MAX_REASONING_TOKENS = 32000
+EMIT_PLAN_MAX_TOKENS = 16000
+EMIT_PLAN_TEMPERATURE = 0.2
+
+
+def detect_pr_labels(spec: str) -> list[str]:
+    """Return sorted unique PR labels found in the spec (e.g. ['PR-1', 'PR-2']).
+
+    Uses a simple regex over `PR-<n>` occurrences. A spec with no such markers
+    returns an empty list, signalling a single-plan emission.
+    """
+    numbers = sorted({int(m.group(1)) for m in _PR_PATTERN.finditer(spec)})
+    return [f"PR-{n}" for n in numbers]
+
+
+def _strip_spec_suffix(stem: str) -> str:
+    """Strip known spec-file suffixes from a stem (e.g. `foo.spec-debate-final` -> `foo`)."""
+    for suffix in _SPEC_STEM_SUFFIXES:
+        if stem.endswith(suffix):
+            return stem[: -len(suffix)]
+    return stem
+
+
+def default_plan_out_path(
+    spec_path: Optional[str], pr_label: str
+) -> str:
+    """Compute default output path for an emitted plan.
+
+    If spec_path is provided, emit as a sibling file with `-<pr-label>.plan.md`
+    appended to the spec's stem (stripping any `.spec-debate-final` suffix).
+    Otherwise emit `./<pr-label>.plan.md` in the CWD.
+    """
+    pr_slug = pr_label.lower()
+    if spec_path:
+        p = Path(spec_path)
+        stem = _strip_spec_suffix(p.stem)
+        return str(p.with_name(f"{stem}-{pr_slug}.plan.md"))
+    return f"./{pr_slug}.plan.md"
+
+
+def _derive_title_hint(spec_path: Optional[str]) -> str:
+    """Derive a human-readable title from a spec filename.
+
+    Strips known spec suffixes before converting separators to spaces, so
+    `foo.spec-debate-final.md` becomes `foo` not `foo.spec debate final`.
+    """
+    if not spec_path:
+        return "Feature"
+    stem = _strip_spec_suffix(Path(spec_path).stem)
+    return stem.replace("-", " ").replace("_", " ").replace(".", " ").strip() or "Feature"
+
+
+def handle_detect_prs(args: argparse.Namespace) -> None:
+    """Handle detect-prs action.
+
+    Reads a spec (from --spec path or stdin) and prints the PR labels found.
+    With --json, emits a JSON array; otherwise one label per line.
+    """
+    if args.spec:
+        try:
+            spec = Path(args.spec).read_text(encoding="utf-8")
+        except OSError as e:
+            print(f"Error: cannot read --spec {args.spec}: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        spec = sys.stdin.read()
+
+    labels = detect_pr_labels(spec)
+
+    if getattr(args, "json", False):
+        print(json.dumps(labels))
+    else:
+        for label in labels:
+            print(label)
+
+
+def handle_emit_plan(args: argparse.Namespace, models: list[str]) -> None:
+    """Handle emit-plan action.
+
+    Reads a finalized spec (from --spec path or stdin), prompts a single model
+    to produce an executable implementation plan scoped to one PR, and writes
+    the result to disk.
+
+    Args:
+        args: Parsed command-line arguments.
+        models: List of model identifiers (first is used).
+    """
+    if args.spec:
+        try:
+            spec = Path(args.spec).read_text(encoding="utf-8").strip()
+        except OSError as e:
+            print(f"Error: cannot read --spec {args.spec}: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        spec = sys.stdin.read().strip()
+
+    if not spec:
+        print(
+            "Error: No spec provided. Pass --spec <path> or pipe via stdin.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    pr_label = args.pr_label or "PR-1"
+    pr_scope = (
+        args.pr_scope
+        or f"Infer {pr_label}'s scope from the spec's deployment-strategy / PR-stack section."
+    )
+
+    title_hint = args.title_hint or _derive_title_hint(args.spec)
+
+    out_path = args.plan_out or default_plan_out_path(args.spec, pr_label)
+
+    prompt = EMIT_PLAN_PROMPT.format(
+        pr_label=pr_label,
+        pr_scope=pr_scope,
+        title_hint=title_hint,
+        spec=spec,
+    )
+
+    try:
+        completion_kwargs = {
+            "model": models[0],
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if is_reasoning_model(models[0]):
+            completion_kwargs["max_completion_tokens"] = EMIT_PLAN_MAX_REASONING_TOKENS
+        else:
+            completion_kwargs["max_tokens"] = EMIT_PLAN_MAX_TOKENS
+            completion_kwargs["temperature"] = EMIT_PLAN_TEMPERATURE
+
+        response = completion(**completion_kwargs)
+        content = response.choices[0].message.content or ""
+
+        input_tokens = response.usage.prompt_tokens if response.usage else 0
+        output_tokens = response.usage.completion_tokens if response.usage else 0
+        cost_tracker.add(models[0], input_tokens, output_tokens)
+
+        out_p = Path(out_path)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(content.strip() + "\n", encoding="utf-8")
+
+        print(f"\nPlan written: {out_path}", file=sys.stderr)
+        print(f"  Label:  {pr_label}", file=sys.stderr)
+        print(f"  Model:  {models[0]}", file=sys.stderr)
+        print(f"  Size:   {len(content):,} chars", file=sys.stderr)
+        print("", file=sys.stderr)
+        print(cost_tracker.summary(), file=sys.stderr)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -1163,6 +1355,10 @@ def main() -> None:
 
     if args.action == "export-tasks":
         handle_export_tasks(args, models)
+        return
+
+    if args.action == "emit-plan":
+        handle_emit_plan(args, models)
         return
 
     spec, session_state, models = load_or_resume_session(args, models)

@@ -287,6 +287,109 @@ Extract:
 Be thorough. Every actionable item in the spec should become a task."""
 
 
+EMIT_PLAN_PROMPT = """You are producing an executable implementation plan derived from a finalized technical specification. The spec is authoritative; the plan is a sequenced execution artifact that references the spec rather than duplicating its content.
+
+Scope of this plan: **{pr_label}** — {pr_scope}
+
+The finalized spec (authoritative for every schema, algorithm, error code, and invariant — cite it by section number instead of re-stating):
+
+{spec}
+
+Produce a plan document with this exact structure:
+
+```
+# {title_hint} — {pr_label} implementation plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** <one sentence — what this PR ships>
+
+**Architecture:** <2-3 sentences — approach; cite spec sections>
+
+**Tech stack:** <languages, frameworks, test runner, build tool — infer from spec>
+
+**Normative spec reference:** `<path-to-spec>` — all schemas, algorithms, error codes, and exit codes are defined there. This plan does not duplicate spec content; each task cites the relevant §.
+
+**Branch:** <branch name matching the PR; stacked or off main>
+
+**Out of scope for {pr_label}:**
+- <bullets — explicit carveouts>
+
+---
+
+## Task 0: <short title>
+
+**Files:**
+- Create: `path/to/new.ts`
+- Modify: `path/to/existing.ts`
+- Test: `path/to/file.test.ts`
+
+**Step 1: Write the failing test**
+```<lang>
+<complete test code — not pseudo-code>
+```
+
+**Step 2: Run — expect fail**
+```bash
+<exact command>
+```
+Expected: FAIL with "<specific error>".
+
+**Step 3: Implement**
+<brief prose describing the implementation; include a code block for non-obvious functions; cite spec §>
+
+**Step 4: Run — expect pass**
+```bash
+<exact command>
+```
+Expected: PASS.
+
+**Step 5: Commit**
+```bash
+git add <paths>
+git commit -m "<conventional-commit message>"
+```
+
+---
+
+## Task 1: ...
+
+(repeat for each task)
+
+---
+
+## Final verification
+
+```bash
+<the full local gate for this PR — typecheck, lint, test, any CI-mirror scripts>
+```
+All must exit 0.
+
+---
+
+## Task inventory (for executing-plans batching)
+
+1. Task 0 — <short title>
+2. Task 1 — <short title>
+...
+
+**Natural parallelism (for subagent-driven execution):**
+<bullets describing which tasks are independent and can fan out to parallel subagents, and which gate sequentially>
+```
+
+Rules for the plan content:
+
+1. **Bite-sized.** Each Step is one action (2-5 minutes). Split implementation across multiple tasks if needed. TDD ordering (failing test first, then impl).
+2. **Exact.** File paths, commands, expected exit codes all concrete. No "run the tests" — write the full command.
+3. **Cite, don't duplicate.** When referencing a schema, algorithm, or error code: `per spec §4.6`, not a copy of the schema body. The reader has the spec.
+4. **Frequent commits.** One commit per task is the target. Each commit message follows Conventional Commits.
+5. **Verify everything.** Every task ends with a run that must pass, followed by commit.
+6. **No invented content.** If the spec doesn't specify something, flag it with `(decision: <option A> vs <option B> — pick before starting)` rather than silently inventing. Do not hallucinate exit codes, schema fields, or CLI flags that aren't in the spec.
+7. **Stack invariants.** If this PR depends on an earlier PR, Task 0 rebases and verifies the prior PR's gates still pass on the base.
+8. **CHANGELOG task.** If the project is likely to have a CHANGELOG.md, include a final task that adds an `[Unreleased]` entry under `### Added` / `### Changed` / `### Fixed`.
+9. **Output only the plan document.** No preamble, no meta-commentary. Start directly with the `#` heading. Do NOT wrap the output in code fences."""
+
+
 def get_system_prompt(doc_type: str, persona: Optional[str] = None) -> str:
     """Get the system prompt for a given document type and optional persona."""
     if persona:
