@@ -645,6 +645,58 @@ If yes:
 
 This creates a complete PRD + Tech Spec pair from a single session.
 
+### Step 9: Emit Executable Implementation Plan (Optional — Tech Specs Only)
+
+**Applies only when the finalized document is a Technical Specification.** PRDs skip this step.
+
+After Step 6 (user accepted the spec) — or after Step 8 converted a PRD into a tech spec — ask the user:
+
+> "Would you like to emit an executable implementation plan alongside this spec? The plan decomposes the spec into TDD-ordered tasks with verify commands, designed for `superpowers:executing-plans` to run task-by-task. Output goes to a sibling `.plan.md` file per PR defined in the spec's deployment-strategy section."
+
+**Why separate from debate:** the spec is the design contract (reviewed by all models for correctness). The plan is a derivative execution sequence — sequencing, task granularity, and commit cadence don't benefit from adversarial review the same way design decisions do. Keep them apart.
+
+**If the user opts in:**
+
+1. **Detect PR structure.** Scan the spec for `PR-<n>` markers (e.g. `PR-1`, `PR-2`, ...) — typically found in a "Deployment Strategy" / "Rollout" section. Also look for follow-up labels like "flag flip", "rollout follow-up", or "PR-N+1 follow-up" — these are plan-worthy too.
+
+   Quick check (no model call required):
+   ```bash
+   cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py detect-prs --spec spec-output.md
+   # Or JSON for machine parsing:
+   python3 debate.py detect-prs --spec spec-output.md --json
+   ```
+
+   If no PR markers found → single plan, `--pr-label PR-1`.
+
+2. **Confirm scope with user.** Show the detected labels and ask:
+   > "I found N PRs in the spec: [PR-1, PR-2, ...]. Emit plans for all of them, or a subset?"
+
+3. **For each selected PR, ask a one-line scope description** (optional — can be auto-inferred from the spec, but user-supplied scope improves output quality):
+   > "For PR-1, one-line scope? (e.g. 'data engine + schemas'). Leave blank to let the model derive from the spec."
+
+4. **Emit each plan.** One model call per PR:
+   ```bash
+   cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py emit-plan \
+     --spec /path/to/spec-output.md \
+     --pr-label PR-1 \
+     --pr-scope "data engine + schemas" \
+     --title-hint "NSW jurisdiction compat" \
+     --models claude-opus-4-6
+   ```
+
+   Default output path: sibling of `--spec` with `-<pr-label>.plan.md` appended to the spec's stem (stripping `.spec-debate-final` / `.spec` suffixes if present). Override with `--plan-out <path>`.
+
+5. **Use a strong reasoning model.** This is a one-shot generation of a 400–1500 line structured document — cheap but quality-sensitive. Recommend `claude-opus-4-6`, `gpt-5.4-pro`, or `gemini-3.1-pro-preview`. Avoid fast/flash models for plan emission.
+
+6. **Report to user:** paths written + total cost across all plan calls. Do not run another debate round on the plans — they're derivative; if the user wants adversarial plan review, that's a separate `/spec-debate` session with the plan as input.
+
+**Plan output structure (baked into the prompt):** header with required `superpowers:executing-plans` sub-skill directive, Goal/Architecture/Tech-stack, numbered Tasks with Files/Steps/Commit format, TDD ordering (failing test → run → impl → run → commit), spec-section citations (never duplication), final verification gate, Task inventory with natural-parallelism notes.
+
+**After emission:**
+
+- If the user has `superpowers:executing-plans` skill available, they can hand off to it immediately.
+- If they want a different execution model (ticket-per-task in Linear/Jira, etc.), they can still use the plan as input to `export-tasks` — the two are complementary, not redundant.
+
 ## Convergence Rules
 
 - Maximum 10 rounds per cycle (ask user to continue if reached)
@@ -905,6 +957,37 @@ Use this to see exactly what changed between rounds. Helpful for:
 - Reviewing changes before accepting
 - Documenting the evolution of the spec
 
+### Emit Executable Implementation Plans
+
+Produce a `superpowers:executing-plans`-compatible `.plan.md` from a finalized tech spec. One plan per PR defined in the spec's deployment-strategy section. Unlike `critique` (adversarial) or `export-tasks` (issue-tracker tasks), this emits a fully-sequenced TDD plan with per-task failing-test → run → implement → commit steps.
+
+```bash
+# Single PR
+python3 debate.py emit-plan \
+  --spec docs/plans/2026-04-22-feature.spec-debate-final.md \
+  --pr-label PR-1 \
+  --pr-scope "data engine + schemas" \
+  --models claude-opus-4-6
+
+# Loop over stacked PRs
+for n in 1 2 3 4; do
+  python3 debate.py emit-plan \
+    --spec docs/plans/2026-04-22-feature.spec-debate-final.md \
+    --pr-label "PR-$n" \
+    --models claude-opus-4-6
+done
+```
+
+Output:
+- Default path: sibling of the spec with `-<pr-label>.plan.md` appended (stripping `.spec-debate-final` / `.spec` from the stem).
+- Override with `--plan-out <path>`.
+
+When to use:
+- After the spec converges (Step 9 of the process).
+- Separately, when migrating an older spec into the executing-plans workflow — just pass any spec file.
+
+Not a replacement for `export-tasks`; they're complementary. `export-tasks` produces issue-tracker rows; `emit-plan` produces the step-by-step execution script for that same work.
+
 ### Export to Task List
 
 Extract actionable tasks from a finalized spec:
@@ -936,6 +1019,8 @@ python3 debate.py critique --models MODEL_LIST --doc-type TYPE [OPTIONS] < spec.
 python3 debate.py critique --resume SESSION_ID
 python3 debate.py diff --previous OLD.md --current NEW.md
 python3 debate.py export-tasks --models MODEL --doc-type TYPE [--json] < spec.md
+python3 debate.py emit-plan --spec SPEC.md --pr-label PR-N --pr-scope "..." --title-hint "..." [--plan-out OUT.md] [--models MODEL]
+python3 debate.py detect-prs --spec SPEC.md [--json]   # No model call; lists PR-N labels found
 
 # Info commands
 python3 debate.py providers      # List supported providers and API key status
@@ -967,3 +1052,11 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 - `--poll-timeout` - Telegram reply timeout in seconds (default: 60)
 - `--json, -j` - Output as JSON
 - `--codex-search` - Enable web search for Codex CLI models (allows researching current info)
+
+**emit-plan options:**
+- `--spec <path>` - Finalized spec file (reads stdin if omitted)
+- `--pr-label <label>` - PR label for this plan (default: `PR-1`). Appears in plan header and filename.
+- `--pr-scope <text>` - One-line description of what this PR covers. Optional; auto-inferred from spec if omitted.
+- `--title-hint <text>` - Feature/project name used in the plan title (default: derived from spec filename).
+- `--plan-out <path>` - Output path. Default: sibling of `--spec` with `-<pr-label>.plan.md` suffix.
+- `--models <model>` - Model used for generation (first in list). Recommend a strong reasoning model (claude-opus-4-6, gpt-5.4-pro, gemini-3.1-pro-preview).
