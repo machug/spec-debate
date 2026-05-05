@@ -85,8 +85,11 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 
 **Azure AI Foundry Setup:**
 - Set `AZURE_AI_API_KEY` and `AZURE_AI_API_BASE` (your Foundry endpoint URL)
-- Models use `foundry/` prefix: `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning`, `foundry/deepseek-r1`
-- Supports Claude, Grok, Llama, Phi, DeepSeek, Cohere, and more via the Foundry model catalog
+- Optional: `AZURE_AI_REGION` (e.g. `eastus2`, `swedencentral`) — required for region-scoped catalog discovery; auto-derived from `AZURE_AI_API_BASE` when the host follows the `<region>.api.cognitive.microsoft.com` pattern
+- Models use `foundry/` prefix: `foundry/claude-opus-4-7`, `foundry/gpt-5.5`, `foundry/Phi-4-reasoning`, `foundry/DeepSeek-V4-Flash`
+- Supports Claude, Grok, Llama, Phi, DeepSeek, Mistral, Kimi, and more via the Foundry model catalog
+- **Model availability is region-specific.** Frontier models like `claude-opus-4-7` and `gpt-5.5` are not deployable in every region (e.g. `westeurope` lacks both as of April 2026). Run `python3 debate.py discover-models` (with region resolved) to list models for your region, or `python3 debate.py foundry-regions <model>` to find regions where a specific model is deployable. Requires the `az` CLI authenticated to your subscription.
+- **Anthropic Claude models require Enterprise or MCA-E subscriptions.** CSP (`CSP_2015-05-01`) and Pay-As-You-Go subscriptions cannot deploy `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5`, or other Claude models on Foundry — the catalog query will list them but the Foundry portal shows "No available regions" at deploy time. Check your subscription's `quotaId` with `az account show --query subscriptionPolicies.quotaId`. Non-Anthropic frontier models (`gpt-5.5`, `DeepSeek-V4-*`, `Kimi-K2.6`, `grok-*`, `Llama-*`, `Phi-*`) have no such restriction and deploy on any subscription type.
 
 **Codex CLI Setup:**
 - Install: `npm install -g @openai/codex && codex login`

@@ -689,7 +689,200 @@ def discover_models() -> dict[str, list[str]]:
         except Exception as e:
             results["Moonshot (Kimi)"] = [f"[error: {e}]"]
 
+    # Azure AI Foundry — region-scoped catalog via az cli
+    if os.environ.get("AZURE_AI_API_KEY"):
+        region = resolve_foundry_region()
+        if region:
+            label = f"Azure AI Foundry ({region})"
+            try:
+                models = list_foundry_models_in_region(region)
+                if models:
+                    results[label] = [f"foundry/{m}" for m in models]
+                else:
+                    results[label] = ["[no frontier models found in region]"]
+            except FileNotFoundError:
+                results[label] = ["[az cli not installed — skip or set AZURE_AI_REGION]"]
+            except Exception as e:
+                results[label] = [f"[error: {e}]"]
+        else:
+            results["Azure AI Foundry"] = [
+                "[set AZURE_AI_REGION (e.g. eastus2, swedencentral) to discover models]"
+            ]
+
     return results
+
+
+def resolve_foundry_region() -> Optional[str]:
+    """Determine Azure region for Foundry queries.
+
+    Order: AZURE_AI_REGION env, then parse from AZURE_AI_API_BASE host
+    if it follows `<region>.api.cognitive.microsoft.com` form.
+    Returns None if region cannot be resolved.
+    """
+    region = os.environ.get("AZURE_AI_REGION", "").strip().lower()
+    if region:
+        return region
+
+    base = os.environ.get("AZURE_AI_API_BASE", "")
+    if base:
+        from urllib.parse import urlparse
+
+        host = urlparse(base).hostname or ""
+        # `<region>.api.cognitive.microsoft.com` — region is first label
+        if host.endswith(".api.cognitive.microsoft.com"):
+            return host.split(".", 1)[0].lower()
+
+    return None
+
+
+def list_foundry_models_in_region(region: str) -> list[str]:
+    """Query Azure for Foundry models available in a region.
+
+    Filters to frontier model families (Anthropic, xAI, OpenAI gpt-5+,
+    DeepSeek, Mistral large, Llama 3+, Phi 4+). Drops legacy families
+    (gpt-3.5, gpt-4 family, ada/babbage/davinci, embeddings, dall-e,
+    whisper, tts).
+
+    Returns deduplicated list of `<model>:<version>` identifiers
+    suitable for use as Foundry deployment targets.
+    """
+    import subprocess
+
+    proc = subprocess.run(
+        [
+            "az",
+            "cognitiveservices",
+            "model",
+            "list",
+            "--location",
+            region,
+            "-o",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    raw = json.loads(proc.stdout)
+
+    frontier_keywords = (
+        "claude",
+        "grok",
+        "gpt-5",
+        "gpt-oss",
+        "o3",
+        "o4",
+        "deepseek",
+        "mistral-large",
+        "ministral",
+        "llama-3",
+        "llama-4",
+        "phi-4",
+        "phi-5",
+        "kimi",
+        "glm-",
+    )
+    excluded = (
+        "embed",
+        "dall-e",
+        "whisper",
+        "tts",
+        "transcribe",
+        "vision-preview",
+    )
+
+    latest: dict[str, str] = {}
+    for item in raw:
+        m = item.get("model", item)
+        name = m.get("name", "")
+        version = m.get("version", "")
+        lname = name.lower()
+        if not any(k in lname for k in frontier_keywords):
+            continue
+        if any(x in lname for x in excluded):
+            continue
+        prior = latest.get(name)
+        if prior is None or version > prior:
+            latest[name] = version
+
+    return sorted(f"{n}:{v}" if v else n for n, v in latest.items())
+
+
+def find_foundry_regions_for_model(
+    model_name: str, regions: Optional[list[str]] = None
+) -> dict[str, list[str]]:
+    """Scan regions for availability of a specific Foundry model.
+
+    Args:
+        model_name: Model name (e.g. `claude-opus-4-7`, `gpt-5.5`). Case-insensitive substring match.
+        regions: Regions to scan. Defaults to common high-availability regions.
+
+    Returns dict mapping region -> list of matching `<name>:<version>` entries.
+    Empty list value means the region was queried but had no match.
+    """
+    import subprocess
+
+    if regions is None:
+        regions = [
+            "eastus",
+            "eastus2",
+            "westus",
+            "westus3",
+            "northcentralus",
+            "southcentralus",
+            "swedencentral",
+            "westeurope",
+            "northeurope",
+            "uksouth",
+            "francecentral",
+            "germanywestcentral",
+            "switzerlandnorth",
+            "australiaeast",
+            "japaneast",
+            "koreacentral",
+            "southeastasia",
+            "eastasia",
+            "canadaeast",
+            "brazilsouth",
+        ]
+
+    needle = model_name.lower()
+    out: dict[str, list[str]] = {}
+    for region in regions:
+        try:
+            proc = subprocess.run(
+                [
+                    "az",
+                    "cognitiveservices",
+                    "model",
+                    "list",
+                    "--location",
+                    region,
+                    "-o",
+                    "json",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            raw = json.loads(proc.stdout)
+            matches: list[str] = []
+            for item in raw:
+                m = item.get("model", item)
+                name = m.get("name", "")
+                version = m.get("version", "")
+                if needle in name.lower():
+                    skus = ", ".join(s.get("name", "") for s in m.get("skus", []))
+                    matches.append(f"{name}:{version} [{skus}]" if skus else f"{name}:{version}")
+            out[region] = sorted(set(matches))
+        except subprocess.CalledProcessError as e:
+            out[region] = [f"[error: {e.stderr.strip()[:80]}]"]
+        except Exception as e:
+            out[region] = [f"[error: {e}]"]
+
+    return out
 
 
 def handle_bedrock_command(subcommand: str, arg: Optional[str], region: Optional[str]):
