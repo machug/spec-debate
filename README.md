@@ -108,7 +108,24 @@ Set `AZURE_AI_API_KEY` and `AZURE_AI_API_BASE` (your Foundry project endpoint). 
 ```bash
 export AZURE_AI_API_KEY="your-key"
 export AZURE_AI_API_BASE="https://your-resource.services.ai.azure.com/api/projects/your-project"
+
+# Optional: required for region-scoped model discovery if base URL doesn't
+# embed the region. Auto-derived from <region>.api.cognitive.microsoft.com hosts.
+export AZURE_AI_REGION="eastus2"
 ```
+
+**Model availability is region-specific.** Frontier models like `claude-opus-4-7` and `gpt-5.5` aren't deployable in every region (e.g. `westeurope` lacks both as of April 2026). Use:
+
+```bash
+# List models available in your region
+python3 debate.py discover-models           # uses AZURE_AI_REGION
+
+# Find regions where a specific model is deployable
+python3 debate.py foundry-regions claude-opus-4-7
+python3 debate.py foundry-regions gpt-5.5
+```
+
+Both commands shell out to the `az` CLI and require an authenticated subscription.
 
 ### AWS Bedrock
 

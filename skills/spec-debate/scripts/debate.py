@@ -37,6 +37,8 @@ Supported providers (set corresponding API key):
                 Reasoning: --codex-reasoning xhigh (minimal, low, medium, high, xhigh)
 
     Run 'python3 debate.py discover-models' to query APIs for the latest available models.
+    Run 'python3 debate.py foundry-regions <model>' to find Azure regions where a Foundry
+    model is deployable (e.g. 'foundry-regions claude-opus-4-7').
 
 Document types:
     prd   - Product Requirements Document (business/product focus)
@@ -90,6 +92,7 @@ from prompts import EMIT_PLAN_PROMPT, EXPORT_TASKS_PROMPT, get_doc_type_name  # 
 from providers import (  # noqa: E402
     DEFAULT_CODEX_REASONING,
     discover_models,
+    find_foundry_regions_for_model,
     get_available_providers,
     get_bedrock_config,
     get_default_model,
@@ -439,6 +442,7 @@ Document types:
             "critique",
             "providers",
             "discover-models",
+            "foundry-regions",
             "test",
             "send-final",
             "diff",
@@ -582,6 +586,39 @@ def handle_info_command(args: argparse.Namespace) -> bool:
                 for m in models:
                     print(f"    {m}")
                 print()
+        return True
+
+    if args.action == "foundry-regions":
+        model = args.profile_name
+        if not model:
+            print(
+                "Usage: python3 debate.py foundry-regions <model-name>\n"
+                "Example: python3 debate.py foundry-regions claude-opus-4-7",
+                file=sys.stderr,
+            )
+            return True
+        print(f"Scanning Azure regions for Foundry model matching '{model}'...\n")
+        results = find_foundry_regions_for_model(model)
+        available = {r: m for r, m in results.items() if m and not m[0].startswith("[error")}
+        empty = [r for r, m in results.items() if not m]
+        errored = {r: m[0] for r, m in results.items() if m and m[0].startswith("[error")}
+
+        if available:
+            print("Available in:\n")
+            for region, matches in sorted(available.items()):
+                print(f"  {region}:")
+                for entry in matches:
+                    print(f"    {entry}")
+                print()
+        else:
+            print("No matching deployments found in scanned regions.\n")
+
+        if empty:
+            print(f"Not available in: {', '.join(sorted(empty))}\n")
+        if errored:
+            print("Errors:\n")
+            for region, err in sorted(errored.items()):
+                print(f"  {region}: {err}")
         return True
 
     if args.action == "test":
