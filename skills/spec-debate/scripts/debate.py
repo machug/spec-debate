@@ -4,15 +4,15 @@ Spec-debate: multi-LLM adversarial specification development.
 Sends specs to multiple LLMs for critique using LiteLLM.
 
 Usage:
-    echo "spec" | python3 debate.py critique --models gpt-5.4
-    echo "spec" | python3 debate.py critique --models gpt-5.4,gemini/gemini-3.1-pro-preview,xai/grok-4.20-0309-reasoning --doc-type prd
-    echo "spec" | python3 debate.py critique --models codex/gpt-5.3-codex,gemini/gemini-3.1-pro-preview --doc-type tech
-    echo "spec" | python3 debate.py critique --models gpt-5.4 --focus security
-    echo "spec" | python3 debate.py critique --models gpt-5.4 --persona "security engineer"
-    echo "spec" | python3 debate.py critique --models gpt-5.4 --context ./api.md --context ./schema.sql
-    echo "spec" | python3 debate.py critique --models gpt-5.4 --profile strict-security
-    echo "spec" | python3 debate.py critique --models gpt-5.4 --preserve-intent
-    echo "spec" | python3 debate.py critique --models gpt-5.4 --session my-debate
+    echo "spec" | python3 debate.py critique --models gpt-5.5
+    echo "spec" | python3 debate.py critique --models gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.3-reasoning --doc-type prd
+    echo "spec" | python3 debate.py critique --models codex/gpt-5.5-codex,gemini/gemini-3.1-pro-preview --doc-type tech
+    echo "spec" | python3 debate.py critique --models gpt-5.5 --focus security
+    echo "spec" | python3 debate.py critique --models gpt-5.5 --persona "security engineer"
+    echo "spec" | python3 debate.py critique --models gpt-5.5 --context ./api.md --context ./schema.sql
+    echo "spec" | python3 debate.py critique --models gpt-5.5 --profile strict-security
+    echo "spec" | python3 debate.py critique --models gpt-5.5 --preserve-intent
+    echo "spec" | python3 debate.py critique --models gpt-5.5 --session my-debate
     python3 debate.py critique --resume my-debate
     echo "spec" | python3 debate.py diff --previous prev.md --current current.md
     echo "spec" | python3 debate.py export-tasks --doc-type prd
@@ -21,18 +21,18 @@ Usage:
     python3 debate.py sessions
 
 Supported providers (set corresponding API key):
-    OpenAI:     OPENAI_API_KEY       models: gpt-5.4, gpt-5.4-pro, gpt-5.4-mini, o3-pro, o4-mini, etc.
-    Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5, etc.
+    OpenAI:     OPENAI_API_KEY       models: gpt-5.5, gpt-5.5-pro, gpt-5.5-mini, o3-pro, o4-mini, etc.
+    Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5, etc.
     Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-2.5-pro, gemini/gemini-2.5-flash, etc.
-    xAI:        XAI_API_KEY          models: xai/grok-4.20-0309-reasoning, xai/grok-4-1-fast-reasoning, xai/grok-4-0709, etc.
-    Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-6, foundry/grok-4, foundry/Phi-4-reasoning, etc.
+    xAI:        XAI_API_KEY          models: xai/grok-4.3-reasoning, xai/grok-4.3-fast, xai/grok-4.20-0309-reasoning, etc.
+    Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-7, foundry/grok-4, foundry/Phi-4-reasoning, etc.
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
     Groq:       GROQ_API_KEY         models: groq/llama-3.3-70b, etc.
-    OpenRouter: OPENROUTER_API_KEY   models: openrouter/openai/gpt-5.2-pro, openrouter/anthropic/claude-opus-4.6, etc.
-    Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-chat, etc.
+    OpenRouter: OPENROUTER_API_KEY   models: openrouter/openai/gpt-5.5-pro, openrouter/anthropic/claude-opus-4.7, etc.
+    Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, deepseek/deepseek-chat, etc.
     ZAI (GLM):  ZAI_API_KEY          models: zai/glm-5.1, zai/glm-5-turbo, zai/glm-5, etc.
-    Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.5, moonshot/kimi-k2-thinking, etc.
-    Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.3-codex, codex/gpt-5.2-codex
+    Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.6, moonshot/kimi-k2-thinking, moonshot/kimi-k2.5, etc.
+    Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.5-codex, codex/gpt-5.3-codex
                 Install: npm install -g @openai/codex && codex login
                 Reasoning: --codex-reasoning xhigh (minimal, low, medium, high, xhigh)
 
@@ -238,7 +238,7 @@ def add_core_arguments(parser: argparse.ArgumentParser) -> None:
         "--models",
         "-m",
         default=None,
-        help="Comma-separated list of models (e.g., gpt-5.4,gemini/gemini-3.1-pro-preview,xai/grok-4.20-0309-reasoning)",
+        help="Comma-separated list of models (e.g., gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.3-reasoning)",
     )
     parser.add_argument(
         "--doc-type",
@@ -403,20 +403,20 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  echo "spec" | python3 debate.py critique --models gpt-5.4
-  echo "spec" | python3 debate.py critique --models gpt-5.4 --focus security
-  echo "spec" | python3 debate.py critique --models gpt-5.4 --persona "security engineer"
-  echo "spec" | python3 debate.py critique --models gpt-5.4 --context ./api.md
+  echo "spec" | python3 debate.py critique --models gpt-5.5
+  echo "spec" | python3 debate.py critique --models gpt-5.5 --focus security
+  echo "spec" | python3 debate.py critique --models gpt-5.5 --persona "security engineer"
+  echo "spec" | python3 debate.py critique --models gpt-5.5 --context ./api.md
   echo "spec" | python3 debate.py critique --profile my-security-profile
   python3 debate.py diff --previous old.md --current new.md
   echo "spec" | python3 debate.py export-tasks --doc-type prd
   python3 debate.py detect-prs --spec spec-output.md
-  python3 debate.py emit-plan --spec spec-output.md --pr-label PR-1 --pr-scope "data engine + schemas" --models claude-opus-4-6
+  python3 debate.py emit-plan --spec spec-output.md --pr-label PR-1 --pr-scope "data engine + schemas" --models claude-opus-4-7
   python3 debate.py providers
   python3 debate.py focus-areas
   python3 debate.py personas
   python3 debate.py profiles
-  python3 debate.py save-profile myprofile --models gpt-5.4,gemini/gemini-3.1-pro-preview --focus security
+  python3 debate.py save-profile myprofile --models gpt-5.5,gemini/gemini-3.1-pro-preview --focus security
 
 Bedrock commands:
   python3 debate.py bedrock status                           # Show Bedrock config
@@ -480,7 +480,7 @@ def handle_test_command(args: argparse.Namespace) -> bool:
     """Test API connectivity for one or more models with a minimal request.
 
     Usage:
-        python3 debate.py test --models gpt-5.4,claude-opus-4-6
+        python3 debate.py test --models gpt-5.5,claude-opus-4-7
         python3 debate.py test  (tests all providers with configured keys)
     """
     import time
@@ -716,18 +716,18 @@ def parse_models(args: argparse.Namespace) -> list[str]:
             )
             print("\nAvailable providers:", file=sys.stderr)
             print(
-                "  OpenAI:    Set OPENAI_API_KEY for gpt-5.4, gpt-5.4-pro, o3, etc.", file=sys.stderr
+                "  OpenAI:    Set OPENAI_API_KEY for gpt-5.5, gpt-5.5-pro, o3, etc.", file=sys.stderr
             )
             print(
-                "  Anthropic: Set ANTHROPIC_API_KEY for claude-opus-4-6, claude-sonnet-4-6, etc.",
+                "  Anthropic: Set ANTHROPIC_API_KEY for claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5, etc.",
                 file=sys.stderr,
             )
             print(
                 "  Google:    Set GEMINI_API_KEY for gemini/gemini-3.1-pro-preview, etc.",
                 file=sys.stderr,
             )
-            print("  xAI:       Set XAI_API_KEY for xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning, etc.", file=sys.stderr)
-            print("  Azure AI:  Set AZURE_AI_API_KEY for foundry/claude-opus-4-6, etc.", file=sys.stderr)
+            print("  xAI:       Set XAI_API_KEY for xai/grok-4.3-reasoning, xai/grok-4.3-fast, etc.", file=sys.stderr)
+            print("  Azure AI:  Set AZURE_AI_API_KEY for foundry/claude-opus-4-7, etc.", file=sys.stderr)
             print(
                 "  Mistral:   Set MISTRAL_API_KEY for mistral/mistral-large, etc.",
                 file=sys.stderr,
@@ -737,12 +737,12 @@ def parse_models(args: argparse.Namespace) -> list[str]:
                 file=sys.stderr,
             )
             print(
-                "  Deepseek:  Set DEEPSEEK_API_KEY for deepseek/deepseek-chat, etc.",
+                "  Deepseek:  Set DEEPSEEK_API_KEY for deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, etc.",
                 file=sys.stderr,
             )
             print("  ZAI (GLM): Set ZAI_API_KEY for zai/glm-5, zai/glm-4.7, etc.", file=sys.stderr)
-            print("  Kimi:      Set MOONSHOT_API_KEY for moonshot/kimi-k2.5, etc.", file=sys.stderr)
-            print("\nOr specify models explicitly: --models gpt-5.4", file=sys.stderr)
+            print("  Kimi:      Set MOONSHOT_API_KEY for moonshot/kimi-k2.6, etc.", file=sys.stderr)
+            print("\nOr specify models explicitly: --models gpt-5.5", file=sys.stderr)
             print(
                 "\nRun 'python3 debate.py providers' to see which keys are set.",
                 file=sys.stderr,

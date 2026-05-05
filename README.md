@@ -81,18 +81,18 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 
 | Provider | Env Var | Example Models |
 |----------|---------|----------------|
-| OpenAI | `OPENAI_API_KEY` | `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `o3-pro`, `o4-mini` |
-| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-6`, `claude-sonnet-4-6` |
+| OpenAI | `OPENAI_API_KEY` | `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.5-mini`, `o3-pro`, `o4-mini` |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
 | Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
-| xAI | `XAI_API_KEY` | `xai/grok-4.20-0309-reasoning`, `xai/grok-4-1-fast-reasoning`, `xai/grok-4-0709` |
-| Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
-| OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.2-pro` |
+| xAI | `XAI_API_KEY` | `xai/grok-4.3-reasoning`, `xai/grok-4.3-fast`, `xai/grok-4.20-0309-reasoning` |
+| Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
+| OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.5-pro` |
 | Mistral | `MISTRAL_API_KEY` | `mistral/mistral-large`, `mistral/codestral` |
 | Groq | `GROQ_API_KEY` | `groq/llama-3.3-70b-versatile` |
-| Deepseek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-chat` |
+| Deepseek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
 | ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
-| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.5`, `moonshot/kimi-k2-thinking` |
-| Codex CLI | ChatGPT subscription | `codex/gpt-5.3-codex` |
+| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.6`, `moonshot/kimi-k2-thinking`, `moonshot/kimi-k2.5` |
+| Codex CLI | ChatGPT subscription | `codex/gpt-5.5-codex`, `codex/gpt-5.3-codex` |
 | Gemini CLI | Google account | `gemini-cli/gemini-3.1-pro-preview` |
 
 Run `python3 debate.py discover-models` to query provider APIs for the latest available models.
@@ -163,7 +163,7 @@ Before drafting, Claude runs a thorough requirements gathering session — probl
 Include existing documents as reference:
 
 ```bash
-python3 debate.py critique --models gpt-5.4 --context ./existing-api.md --context ./schema.sql --doc-type tech < spec.md
+python3 debate.py critique --models gpt-5.5 --context ./existing-api.md --context ./schema.sql --doc-type tech < spec.md
 ```
 
 ### Session Persistence
@@ -172,7 +172,7 @@ Long debates survive interruptions:
 
 ```bash
 # Start a named session
-python3 debate.py critique --models gpt-5.4 --session auth-redesign --doc-type tech < spec.md
+python3 debate.py critique --models gpt-5.5 --session auth-redesign --doc-type tech < spec.md
 
 # Resume where you left off
 python3 debate.py critique --resume auth-redesign
@@ -188,7 +188,7 @@ Each round is auto-checkpointed to `.spec-debate-checkpoints/` for rollback.
 Prevents convergence toward lowest-common-denominator specs. Models must quote what they want to remove, justify the harm, and distinguish errors from preferences:
 
 ```bash
-python3 debate.py critique --models gpt-5.4 --preserve-intent --doc-type tech < spec.md
+python3 debate.py critique --models gpt-5.5 --preserve-intent --doc-type tech < spec.md
 ```
 
 ### Anti-Laziness Checks
@@ -209,7 +209,7 @@ Total tokens: 12,543 in / 3,221 out
 Total cost: $0.0847
 
 By model:
-  gpt-5.4: $0.0523 (8,234 in / 2,100 out)
+  gpt-5.5: $0.0523 (8,234 in / 2,100 out)
   gemini/gemini-3.1-pro-preview: $0.0324 (4,309 in / 1,121 out)
 ```
 
@@ -218,7 +218,7 @@ By model:
 Save frequently used configurations:
 
 ```bash
-python3 debate.py save-profile strict-security --models gpt-5.4,gemini/gemini-3.1-pro-preview --focus security --doc-type tech
+python3 debate.py save-profile strict-security --models gpt-5.5,gemini/gemini-3.1-pro-preview --focus security --doc-type tech
 python3 debate.py critique --profile strict-security < spec.md
 python3 debate.py profiles
 ```
@@ -234,8 +234,8 @@ python3 debate.py diff --previous round1.md --current round2.md
 Convert a finalized spec into structured tasks for your issue tracker:
 
 ```bash
-python3 debate.py export-tasks --models gpt-5.4 --doc-type prd < spec-output.md
-python3 debate.py export-tasks --models gpt-5.4 --doc-type prd --json < spec-output.md
+python3 debate.py export-tasks --models gpt-5.5 --doc-type prd < spec-output.md
+python3 debate.py export-tasks --models gpt-5.5 --doc-type prd --json < spec-output.md
 ```
 
 ### Telegram Integration
@@ -247,7 +247,7 @@ Real-time notifications and human-in-the-loop feedback during debates:
 python3 telegram_bot.py setup
 
 # Run with Telegram enabled
-python3 debate.py critique --models gpt-5.4 --doc-type tech --telegram < spec.md
+python3 debate.py critique --models gpt-5.5 --doc-type tech --telegram < spec.md
 ```
 
 After each round, the bot sends a summary to Telegram and waits 60 seconds for your feedback before continuing. Configurable via `--poll-timeout`.
@@ -265,7 +265,7 @@ python3 debate.py critique --resume SESSION_ID
 python3 debate.py providers
 python3 debate.py discover-models
 python3 debate.py test
-python3 debate.py test --models gpt-5.4,foundry/gpt-5-mini
+python3 debate.py test --models gpt-5.5,foundry/gpt-5-mini
 
 # Utilities
 python3 debate.py diff --previous OLD.md --current NEW.md
