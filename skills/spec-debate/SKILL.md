@@ -67,25 +67,25 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `o3-pro`, `o4-mini` |
-| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
+| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.5-mini`, `o3-pro`, `o4-mini` |
+| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
 | Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4.20-0309-reasoning`, `xai/grok-4-1-fast-reasoning`, `xai/grok-4-0709` |
-| Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
+| xAI        | `XAI_API_KEY`          | `xai/grok-4.3-reasoning`, `xai/grok-4.3-fast`, `xai/grok-4.20-0309-reasoning` |
+| Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
-| OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.2-pro`, `openrouter/anthropic/claude-opus-4.6` |
-| Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-chat`                    |
+| OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.5-pro`, `openrouter/anthropic/claude-opus-4.7` |
+| Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
 | ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
-| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.5`, `moonshot/kimi-k2-thinking` |
-| Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.3-codex`, `codex/gpt-5.2-codex` |
+| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.6`, `moonshot/kimi-k2-thinking`, `moonshot/kimi-k2.5` |
+| Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.5-codex`, `codex/gpt-5.3-codex` |
 | Gemini CLI | (Google account)       | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
 
 **Discover latest models:** Run `cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py discover-models` to query provider APIs for currently available models.
 
 **Azure AI Foundry Setup:**
 - Set `AZURE_AI_API_KEY` and `AZURE_AI_API_BASE` (your Foundry endpoint URL)
-- Models use `foundry/` prefix: `foundry/claude-opus-4-6`, `foundry/grok-4`, `foundry/Phi-4-reasoning`, `foundry/deepseek-r1`
+- Models use `foundry/` prefix: `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning`, `foundry/deepseek-r1`
 - Supports Claude, Grok, Llama, Phi, DeepSeek, Cohere, and more via the Foundry model catalog
 
 **Codex CLI Setup:**
@@ -373,14 +373,15 @@ cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py provide
 Then present available models to the user using AskUserQuestion with multiSelect. Build the options list based on the discover-models output. If discover-models was not run, use these defaults per provider:
 
 **If OPENAI_API_KEY is set, include:**
-- `gpt-5.4` - Fast, good for general critique
-- `gpt-5.4-pro` - Stronger reasoning, slower
-- `gpt-5.4-mini` - Lightweight, cost-effective
+- `gpt-5.5` - Fast, good for general critique
+- `gpt-5.5-pro` - Stronger reasoning, slower
+- `gpt-5.5-mini` - Lightweight, cost-effective
 - `o3-pro` - Advanced reasoning
 
 **If ANTHROPIC_API_KEY is set, include:**
+- `claude-opus-4-7` - Claude Opus 4.7, highest capability (April 2026)
 - `claude-sonnet-4-6` - Claude Sonnet 4.6, excellent reasoning
-- `claude-opus-4-6` - Claude Opus 4.6, highest capability
+- `claude-haiku-4-5` - Claude Haiku 4.5, fast and cheap
 
 **If GEMINI_API_KEY is set, include:**
 - `gemini/gemini-3.1-pro-preview` - Latest Gemini Pro
@@ -388,13 +389,13 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `gemini/gemini-2.5-flash` - Fast, cost-effective
 
 **If XAI_API_KEY is set, include:**
-- `xai/grok-4.20-0309-reasoning` - Flagship Grok with reasoning ($2/$6 per 1M)
-- `xai/grok-4.20-0309-non-reasoning` - Flagship Grok, no reasoning ($2/$6 per 1M)
-- `xai/grok-4-1-fast-reasoning` - Fast Grok with reasoning ($0.20/$0.50 per 1M)
-- `xai/grok-4-1-fast-non-reasoning` - Fast Grok, no reasoning ($0.20/$0.50 per 1M)
+- `xai/grok-4.3-reasoning` - Latest flagship Grok with reasoning (2M context)
+- `xai/grok-4.3-fast` - Fast Grok variant
+- `xai/grok-4.20-0309-reasoning` - Prior flagship with reasoning ($2/$6 per 1M)
+- `xai/grok-4-1-fast-reasoning` - Prior fast Grok with reasoning ($0.20/$0.50 per 1M)
 
 **If AZURE_AI_API_KEY is set, include:**
-- `foundry/claude-opus-4-6` - Claude via Azure Foundry
+- `foundry/claude-opus-4-7` - Claude via Azure Foundry
 - `foundry/grok-4` - Grok via Azure Foundry
 - `foundry/Phi-4-reasoning` - Microsoft Phi-4 reasoning
 
@@ -405,19 +406,23 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `groq/llama-3.3-70b-versatile` - Fast open-source
 
 **If DEEPSEEK_API_KEY is set, include:**
-- `deepseek/deepseek-chat` - Cost-effective
+- `deepseek/deepseek-v4-pro` - Latest flagship (1.6T MoE, 1M context)
+- `deepseek/deepseek-v4-flash` - Fast/cheap variant (284B MoE)
+- `deepseek/deepseek-chat` - Legacy alias, cost-effective
 
 **If ZAI_API_KEY is set, include:**
-- `zai/glm-5.1` - Latest GLM model
+- `zai/glm-5.1` - Latest GLM (April 2026, MIT license, agentic)
 - `zai/glm-5-turbo` - Fast GLM variant
 - `zai/glm-5` - Stable GLM
 
 **If MOONSHOT_API_KEY is set, include:**
-- `moonshot/kimi-k2.5` - Latest Kimi model
+- `moonshot/kimi-k2.6` - Latest Kimi (April 2026, long-horizon agentic)
 - `moonshot/kimi-k2-thinking` - Deep reasoning variant
+- `moonshot/kimi-k2.5` - Prior generation
 
 **If Codex CLI is installed, include:**
-- `codex/gpt-5.3-codex` - OpenAI Codex with extended reasoning
+- `codex/gpt-5.5-codex` - OpenAI Codex on GPT-5.5
+- `codex/gpt-5.3-codex` - Prior Codex with extended reasoning
 
 **If Gemini CLI is installed, include:**
 - `gemini-cli/gemini-3.1-pro-preview` - Google Gemini 3.1 Pro
@@ -625,7 +630,7 @@ After the user review period, or if explicitly requested:
    ```
 
 **Use cases for additional cycles:**
-- First cycle with faster/cheaper models (gpt-5-mini), second cycle with stronger models (gpt-5.4-pro, claude-opus)
+- First cycle with faster/cheaper models (gpt-5-mini), second cycle with stronger models (gpt-5.5-pro, claude-opus)
 - First cycle for structure and completeness, second cycle for security or performance focus
 - Fresh perspective after user-requested changes
 
@@ -681,12 +686,12 @@ After Step 6 (user accepted the spec) — or after Step 8 converted a PRD into a
      --pr-label PR-1 \
      --pr-scope "data engine + schemas" \
      --title-hint "NSW jurisdiction compat" \
-     --models claude-opus-4-6
+     --models claude-opus-4-7
    ```
 
    Default output path: sibling of `--spec` with `-<pr-label>.plan.md` appended to the spec's stem (stripping `.spec-debate-final` / `.spec` suffixes if present). Override with `--plan-out <path>`.
 
-5. **Use a strong reasoning model.** This is a one-shot generation of a 400–1500 line structured document — cheap but quality-sensitive. Recommend `claude-opus-4-6`, `gpt-5.4-pro`, or `gemini-3.1-pro-preview`. Avoid fast/flash models for plan emission.
+5. **Use a strong reasoning model.** This is a one-shot generation of a 400–1500 line structured document — cheap but quality-sensitive. Recommend `claude-opus-4-7`, `gpt-5.5-pro`, or `gemini-3.1-pro-preview`. Avoid fast/flash models for plan emission.
 
 6. **Report to user:** paths written + total cost across all plan calls. Do not run another debate round on the plans — they're derivative; if the user wants adversarial plan review, that's a separate `/spec-debate` session with the plan as input.
 
@@ -735,7 +740,7 @@ Enable real-time notifications and human-in-the-loop feedback. Only active with 
 ### Usage
 
 ```bash
-python3 debate.py critique --model gpt-5.4 --doc-type tech --telegram <<'SPEC_EOF'
+python3 debate.py critique --model gpt-5.5 --doc-type tech --telegram <<'SPEC_EOF'
 <document here>
 SPEC_EOF
 ```
@@ -758,7 +763,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts
 Direct models to prioritize specific concerns using `--focus`:
 
 ```bash
-python3 debate.py critique --models gpt-5.4 --focus security --doc-type tech <<'SPEC_EOF'
+python3 debate.py critique --models gpt-5.5 --focus security --doc-type tech <<'SPEC_EOF'
 <spec here>
 SPEC_EOF
 ```
@@ -778,7 +783,7 @@ Run `python3 debate.py focus-areas` to see all options.
 Have models critique from specific professional perspectives using `--persona`:
 
 ```bash
-python3 debate.py critique --models gpt-5.4 --persona "security-engineer" --doc-type tech <<'SPEC_EOF'
+python3 debate.py critique --models gpt-5.5 --persona "security-engineer" --doc-type tech <<'SPEC_EOF'
 <spec here>
 SPEC_EOF
 ```
@@ -804,7 +809,7 @@ Custom personas also work: `--persona "fintech compliance officer"`
 Include existing documents as context for the critique using `--context`:
 
 ```bash
-python3 debate.py critique --models gpt-5.4 --context ./existing-api.md --context ./schema.sql --doc-type tech <<'SPEC_EOF'
+python3 debate.py critique --models gpt-5.5 --context ./existing-api.md --context ./schema.sql --doc-type tech <<'SPEC_EOF'
 <spec here>
 SPEC_EOF
 ```
@@ -821,7 +826,7 @@ Long debates can crash or need to pause. Sessions save state automatically:
 
 ```bash
 # Start a named session
-python3 debate.py critique --models gpt-5.4 --session my-feature-spec --doc-type tech <<'SPEC_EOF'
+python3 debate.py critique --models gpt-5.5 --session my-feature-spec --doc-type tech <<'SPEC_EOF'
 <spec here>
 SPEC_EOF
 
@@ -858,7 +863,7 @@ Use these to rollback if a revision makes things worse.
 API calls automatically retry with exponential backoff (1s, 2s, 4s) up to 3 times. If a model times out or rate-limits, you'll see:
 
 ```
-Warning: gpt-5.4 failed (attempt 1/3): rate limit exceeded. Retrying in 1.0s...
+Warning: gpt-5.5 failed (attempt 1/3): rate limit exceeded. Retrying in 1.0s...
 ```
 
 If all retries fail, the error is reported and other models continue.
@@ -868,7 +873,7 @@ If all retries fail, the error is reported and other models continue.
 If a model provides critique but doesn't include proper `[SPEC]` tags, a warning is displayed:
 
 ```
-Warning: gpt-5.4 provided critique but no [SPEC] tags found. Response may be malformed.
+Warning: gpt-5.5 provided critique but no [SPEC] tags found. Response may be malformed.
 ```
 
 This catches cases where models forget to format their revised spec correctly.
@@ -878,7 +883,7 @@ This catches cases where models forget to format their revised spec correctly.
 Convergence can collapse toward lowest-common-denominator interpretations, sanding off novel design choices. The `--preserve-intent` flag makes removals expensive:
 
 ```bash
-python3 debate.py critique --models gpt-5.4 --preserve-intent --doc-type tech <<'SPEC_EOF'
+python3 debate.py critique --models gpt-5.5 --preserve-intent --doc-type tech <<'SPEC_EOF'
 <spec here>
 SPEC_EOF
 ```
@@ -913,7 +918,7 @@ Total tokens: 12,543 in / 3,221 out
 Total cost: $0.0847
 
 By model:
-  gpt-5.4: $0.0523 (8,234 in / 2,100 out)
+  gpt-5.5: $0.0523 (8,234 in / 2,100 out)
   gemini/gemini-3.1-pro-preview: $0.0324 (4,309 in / 1,121 out)
 ```
 
@@ -925,7 +930,7 @@ Save frequently used configurations as profiles:
 
 **Create a profile:**
 ```bash
-python3 debate.py save-profile strict-security --models gpt-5.4,gemini/gemini-3.1-pro-preview --focus security --doc-type tech
+python3 debate.py save-profile strict-security --models gpt-5.5,gemini/gemini-3.1-pro-preview --focus security --doc-type tech
 ```
 
 **Use a profile:**
@@ -967,14 +972,14 @@ python3 debate.py emit-plan \
   --spec docs/plans/2026-04-22-feature.spec-debate-final.md \
   --pr-label PR-1 \
   --pr-scope "data engine + schemas" \
-  --models claude-opus-4-6
+  --models claude-opus-4-7
 
 # Loop over stacked PRs
 for n in 1 2 3 4; do
   python3 debate.py emit-plan \
     --spec docs/plans/2026-04-22-feature.spec-debate-final.md \
     --pr-label "PR-$n" \
-    --models claude-opus-4-6
+    --models claude-opus-4-7
 done
 ```
 
@@ -993,7 +998,7 @@ Not a replacement for `export-tasks`; they're complementary. `export-tasks` prod
 Extract actionable tasks from a finalized spec:
 
 ```bash
-cat spec-output.md | python3 debate.py export-tasks --models gpt-5.4 --doc-type prd
+cat spec-output.md | python3 debate.py export-tasks --models gpt-5.5 --doc-type prd
 ```
 
 Output includes:
@@ -1006,7 +1011,7 @@ Output includes:
 Use `--json` for structured output suitable for importing into issue trackers:
 
 ```bash
-cat spec-output.md | python3 debate.py export-tasks --models gpt-5.4 --doc-type prd --json > tasks.json
+cat spec-output.md | python3 debate.py export-tasks --models gpt-5.5 --doc-type prd --json > tasks.json
 ```
 
 ## Script Reference
@@ -1059,4 +1064,4 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 - `--pr-scope <text>` - One-line description of what this PR covers. Optional; auto-inferred from spec if omitted.
 - `--title-hint <text>` - Feature/project name used in the plan title (default: derived from spec filename).
 - `--plan-out <path>` - Output path. Default: sibling of `--spec` with `-<pr-label>.plan.md` suffix.
-- `--models <model>` - Model used for generation (first in list). Recommend a strong reasoning model (claude-opus-4-6, gpt-5.4-pro, gemini-3.1-pro-preview).
+- `--models <model>` - Model used for generation (first in list). Recommend a strong reasoning model (claude-opus-4-7, gpt-5.5-pro, gemini-3.1-pro-preview).

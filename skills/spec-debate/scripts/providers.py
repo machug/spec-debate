@@ -66,6 +66,7 @@ DEFAULT_CODEX_REASONING = "xhigh"
 # Bedrock model mapping: friendly names -> Bedrock model IDs
 BEDROCK_MODEL_MAP = {
     # Anthropic Claude models (current generation)
+    "claude-opus-4.7": "anthropic.claude-opus-4-7-20260416-v1:0",
     "claude-sonnet-4.6": "anthropic.claude-sonnet-4-6-20250627-v1:0",
     "claude-opus-4.6": "anthropic.claude-opus-4-6-20250627-v1:0",
     "claude-sonnet-4": "anthropic.claude-sonnet-4-20250514-v1:0",
@@ -286,14 +287,14 @@ def list_providers():
         print("-" * 60 + "\n")
 
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.4, gpt-5.4-pro, gpt-5.4-mini, o3-pro, o4-mini"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-5.5, gpt-5.5-pro, gpt-5.5-mini, o3-pro, o4-mini"),
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
-            "claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5",
+            "claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5",
         ),
         ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-2.5-pro, gemini/gemini-2.5-flash"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.20-0309-reasoning, xai/grok-4-1-fast-reasoning, xai/grok-4-0709"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.3-reasoning, xai/grok-4.3-fast, xai/grok-4.20-0309-reasoning"),
         (
             "Azure AI Foundry",
             "AZURE_AI_API_KEY",
@@ -305,11 +306,11 @@ def list_providers():
         (
             "OpenRouter",
             "OPENROUTER_API_KEY",
-            "openrouter/openai/gpt-5.2-pro, openrouter/anthropic/claude-opus-4.6",
+            "openrouter/openai/gpt-5.5-pro, openrouter/anthropic/claude-opus-4.7",
         ),
-        ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat"),
+        ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, deepseek/deepseek-chat"),
         ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.1, zai/glm-5-turbo, zai/glm-5"),
-        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.5, moonshot/kimi-k2-thinking"),
+        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.6, moonshot/kimi-k2-thinking, moonshot/kimi-k2.5"),
     ]
 
     if bedrock_config.get("enabled"):
@@ -326,7 +327,7 @@ def list_providers():
     # Codex CLI (uses ChatGPT subscription, not API key)
     codex_status = "[installed]" if CODEX_AVAILABLE else "[not installed]"
     print(f"  {'Codex CLI':12} {'(ChatGPT subscription)':24} {codex_status}")
-    print("             Example models: codex/gpt-5.3-codex, codex/gpt-5.2-codex")
+    print("             Example models: codex/gpt-5.5-codex, codex/gpt-5.3-codex")
     print(
         "             Reasoning: --codex-reasoning (minimal, low, medium, high, xhigh)"
     )
@@ -382,17 +383,17 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
         Note: env_var can be None for providers like Codex CLI that use alternative auth.
     """
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.4"),
-        ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-4-6"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-5.5"),
+        ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-4-7"),
         ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.20-0309-reasoning"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.3-reasoning"),
         # Azure AI Foundry skipped — deployment names are user-specific; use: test --models foundry/<name>
         ("Mistral", "MISTRAL_API_KEY", "mistral/mistral-large"),
         ("Groq", "GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),
-        ("OpenRouter", "OPENROUTER_API_KEY", "openrouter/openai/gpt-5.2-pro"),
-        ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat"),
+        ("OpenRouter", "OPENROUTER_API_KEY", "openrouter/openai/gpt-5.5-pro"),
+        ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro"),
         ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.1"),
-        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.5"),
+        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.6"),
     ]
 
     available: list[tuple[str, Optional[str], str]] = []
@@ -402,7 +403,7 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
 
     # Add Codex CLI if available
     if CODEX_AVAILABLE:
-        available.append(("Codex CLI", None, "codex/gpt-5.3-codex"))
+        available.append(("Codex CLI", None, "codex/gpt-5.5-codex"))
 
     # Add Gemini CLI if available
     if GEMINI_CLI_AVAILABLE:
@@ -612,9 +613,10 @@ def discover_models() -> dict[str, list[str]]:
     # Anthropic — no list models endpoint, show known models
     if os.environ.get("ANTHROPIC_API_KEY"):
         results["Anthropic"] = [
-            "claude-opus-4-6",
+            "claude-opus-4-7",
             "claude-sonnet-4-6",
             "claude-haiku-4-5",
+            "claude-opus-4-6",
             "claude-opus-4",
             "claude-sonnet-4",
         ]
