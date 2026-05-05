@@ -668,6 +668,25 @@ def discover_models() -> dict[str, list[str]]:
         except Exception as e:
             results["Deepseek"] = [f"[error: {e}]"]
 
+    # Moonshot (Kimi)
+    api_key = os.environ.get("MOONSHOT_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                "https://api.moonshot.ai/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            models = sorted(
+                m["id"]
+                for m in data["data"]
+                if "kimi" in m["id"] and "vision" not in m["id"]
+            )
+            results["Moonshot (Kimi)"] = [f"moonshot/{m}" for m in models]
+        except Exception as e:
+            results["Moonshot (Kimi)"] = [f"[error: {e}]"]
+
     return results
 
 
