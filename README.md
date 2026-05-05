@@ -127,6 +127,8 @@ python3 debate.py foundry-regions gpt-5.5
 
 Both commands shell out to the `az` CLI and require an authenticated subscription.
 
+**Subscription eligibility:** Anthropic Claude models (`claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5`, etc.) on Foundry require an **Enterprise Agreement** or **MCA-E** subscription. CSP and Pay-As-You-Go subscriptions can list Claude in the catalog but cannot deploy it — the portal shows "No available regions" at deploy time. Confirm with `az account show --query subscriptionPolicies.quotaId`. Non-Anthropic frontier models (`gpt-5.5`, `DeepSeek-V4-*`, `Kimi-K2.6`, `grok-*`, `Llama-*`, `Phi-*`) have no such restriction.
+
 ### AWS Bedrock
 
 Route all model calls through Bedrock for enterprise security/compliance:
