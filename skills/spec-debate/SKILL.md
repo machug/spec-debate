@@ -32,7 +32,7 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
           ║                                                  ║
           ║  Skill.......: spec-debate                       ║
           ║  Author......: machug          (hughtec.com)     ║
-          ║  Version.....: 1.1.4                             ║
+          ║  Version.....: 1.5.1                             ║
           ║  Origin......: fork of zscole/adversarial-spec   ║
           ║  Released....: 2026                              ║
           ║  License.....: MIT                               ║
@@ -67,7 +67,7 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.5-mini`, `o3-pro`, `o4-mini` |
+| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.5-mini`, `gpt-5.3-codex`, `o3-pro`, `o4-mini` |
 | Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
 | Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
 | xAI        | `XAI_API_KEY`          | `xai/grok-4.3-reasoning`, `xai/grok-4.3-fast`, `xai/grok-4.20-0309-reasoning` |
@@ -78,7 +78,7 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 | Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
 | ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.6`, `moonshot/kimi-k2-thinking`, `moonshot/kimi-k2.5` |
-| Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.5-codex`, `codex/gpt-5.3-codex` |
+| Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.5`, `codex/gpt-5.3-codex` (gpt-5.5-pro requires `OPENAI_API_KEY`, not ChatGPT sub; gpt-5.5 unified the Codex line — no separate gpt-5.5-codex) |
 | Gemini CLI | (Google account)       | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
 
 **Discover latest models:** Run `cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py discover-models` to query provider APIs for currently available models.
@@ -376,10 +376,13 @@ cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py provide
 Then present available models to the user using AskUserQuestion with multiSelect. Build the options list based on the discover-models output. If discover-models was not run, use these defaults per provider:
 
 **If OPENAI_API_KEY is set, include:**
-- `gpt-5.5` - Fast, good for general critique
-- `gpt-5.5-pro` - Stronger reasoning, slower
+- `gpt-5.5` - Fast, good for general critique (unified Codex+GPT line)
+- `gpt-5.5-pro` - Stronger reasoning, slower (API-only; ChatGPT subscription blocks it)
 - `gpt-5.5-mini` - Lightweight, cost-effective
+- `gpt-5.3-codex` - Prior Codex with extended reasoning
 - `o3-pro` - Advanced reasoning
+
+**If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-5.5`, `codex/gpt-5.3-codex`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
 
 **If ANTHROPIC_API_KEY is set, include:**
 - `claude-opus-4-7` - Claude Opus 4.7, highest capability (April 2026)
@@ -424,8 +427,9 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `moonshot/kimi-k2.5` - Prior generation
 
 **If Codex CLI is installed, include:**
-- `codex/gpt-5.5-codex` - OpenAI Codex on GPT-5.5
-- `codex/gpt-5.3-codex` - Prior Codex with extended reasoning
+- `codex/gpt-5.5` - GPT-5.5 via Codex CLI (works on ChatGPT subscription; unified Codex+GPT)
+- `codex/gpt-5.3-codex` - Prior Codex with extended reasoning (works on ChatGPT subscription)
+- Note: `gpt-5.5-pro` is rejected by Codex CLI on ChatGPT subscriptions ("model is not supported when using Codex with a ChatGPT account"). Use the API route via `OPENAI_API_KEY` to reach it. A standalone `gpt-5.5-codex` does not exist — GPT-5.5 absorbed the Codex line.
 
 **If Gemini CLI is installed, include:**
 - `gemini-cli/gemini-3.1-pro-preview` - Google Gemini 3.1 Pro

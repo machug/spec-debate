@@ -374,7 +374,7 @@ def call_codex_model(
     Args:
         system_prompt: System instructions for the model
         user_message: User prompt to send
-        model: Model name (e.g., "codex/gpt-5.5-codex" -> uses "gpt-5.5-codex")
+        model: Model name (e.g., "codex/gpt-5.3-codex" -> uses "gpt-5.3-codex")
         reasoning_effort: Thinking level (minimal, low, medium, high, xhigh). Default: xhigh
         timeout: Timeout in seconds (default 10 minutes)
         search: Enable web search capability for Codex
@@ -405,7 +405,8 @@ USER REQUEST:
             CODEX_PATH,
             "exec",
             "--json",
-            "--full-auto",
+            "--sandbox",
+            "workspace-write",
             "--skip-git-repo-check",
             "--model",
             actual_model,
@@ -413,40 +414,55 @@ USER REQUEST:
             f'model_reasoning_effort="{reasoning_effort}"',
         ]
         if search:
-            cmd.append("--search")
+            cmd.extend(["--enable", "web_search"])
         cmd.append(full_prompt)
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            stdin=subprocess.DEVNULL,
+        )
 
-        if result.returncode != 0:
-            error_msg = (
-                result.stderr.strip() or f"Codex exited with code {result.returncode}"
-            )
-            raise RuntimeError(f"Codex CLI failed: {error_msg}")
-
-        # Parse JSONL output to extract agent messages
+        # Parse JSONL output to extract agent messages and structured errors.
+        # Codex CLI emits API errors as `{"type":"error",...}` events on stdout
+        # while stderr carries deprecation warnings and unrelated skill-load
+        # noise — prefer the structured error over raw stderr.
         response_text = ""
         input_tokens = 0
         output_tokens = 0
+        structured_error: Optional[str] = None
 
         for line in result.stdout.strip().split("\n"):
             if not line.strip():
                 continue
             try:
                 event = json.loads(line)
-
-                if event.get("type") == "item.completed":
-                    item = event.get("item", {})
-                    if item.get("type") == "agent_message":
-                        response_text = item.get("text", "")
-
-                if event.get("type") == "turn.completed":
-                    usage = event.get("usage", {})
-                    input_tokens = usage.get("input_tokens", 0)
-                    output_tokens = usage.get("output_tokens", 0)
-
             except json.JSONDecodeError:
                 continue
+
+            event_type = event.get("type")
+            if event_type == "item.completed":
+                item = event.get("item", {})
+                if item.get("type") == "agent_message":
+                    response_text = item.get("text", "")
+            elif event_type == "turn.completed":
+                usage = event.get("usage", {})
+                input_tokens = usage.get("input_tokens", 0)
+                output_tokens = usage.get("output_tokens", 0)
+            elif event_type in ("error", "turn.failed"):
+                msg = event.get("message") or event.get("error", {}).get("message")
+                if msg:
+                    structured_error = msg
+
+        if result.returncode != 0 or structured_error:
+            error_msg = (
+                structured_error
+                or result.stderr.strip()
+                or f"Codex exited with code {result.returncode}"
+            )
+            raise RuntimeError(f"Codex CLI failed: {error_msg}")
 
         if not response_text:
             raise RuntimeError("No agent message found in Codex output")

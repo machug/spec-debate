@@ -287,7 +287,7 @@ def list_providers():
         print("-" * 60 + "\n")
 
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.5, gpt-5.5-pro, gpt-5.5-mini, o3-pro, o4-mini"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-5.5, gpt-5.5-pro, gpt-5.5-mini, gpt-5.3-codex, o3-pro, o4-mini"),
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
@@ -327,7 +327,9 @@ def list_providers():
     # Codex CLI (uses ChatGPT subscription, not API key)
     codex_status = "[installed]" if CODEX_AVAILABLE else "[not installed]"
     print(f"  {'Codex CLI':12} {'(ChatGPT subscription)':24} {codex_status}")
-    print("             Example models: codex/gpt-5.5-codex, codex/gpt-5.3-codex")
+    print("             Example models: codex/gpt-5.5, codex/gpt-5.3-codex")
+    print("             Note: gpt-5.5-pro requires OPENAI_API_KEY (not available on ChatGPT subscription)")
+    print("             Note: gpt-5.5 unified the Codex line — no separate gpt-5.5-codex exists")
     print(
         "             Reasoning: --codex-reasoning (minimal, low, medium, high, xhigh)"
     )
@@ -403,7 +405,7 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
 
     # Add Codex CLI if available
     if CODEX_AVAILABLE:
-        available.append(("Codex CLI", None, "codex/gpt-5.5-codex"))
+        available.append(("Codex CLI", None, "codex/gpt-5.5"))
 
     # Add Gemini CLI if available
     if GEMINI_CLI_AVAILABLE:
