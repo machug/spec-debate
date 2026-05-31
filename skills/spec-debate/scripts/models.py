@@ -72,8 +72,8 @@ def is_reasoning_model(model: str) -> bool:
     # xAI reasoning models: grok-*-reasoning but NOT *-non-reasoning
     if "xai/" in model_lower and model_lower.endswith("-reasoning") and not model_lower.endswith("-non-reasoning"):
         return True
-    # Moonshot Kimi reasoning models (k2.5 rejects temperature, only allows 1)
-    if "moonshot/" in model_lower and "k2.5" in model_lower:
+    # Moonshot Kimi reasoning models (k2.5/k2.6 reject temperature, only allow 1)
+    if "moonshot/" in model_lower and ("k2.5" in model_lower or "k2.6" in model_lower):
         return True
     return False
 
@@ -90,6 +90,24 @@ def uses_max_completion_tokens(model: str) -> bool:
     if model.lower().startswith(("xai/", "moonshot/")):
         return False
     return True
+
+
+def output_token_budget(model: str) -> int:
+    """Output-token budget for a model.
+
+    Reasoning models spend hidden reasoning tokens out of the same budget as
+    visible output. If the budget is too low, deep reasoners (notably the
+    `-pro` tier) exhaust it on reasoning and the API hard-fails with
+    "unable to complete request: max_output_tokens" instead of returning
+    truncated text. Give reasoning models — especially pro — far more room.
+    """
+    model_lower = model.lower()
+    if is_reasoning_model(model):
+        # Pro/deep reasoners burn the most reasoning tokens before output.
+        if "-pro" in model_lower or "pro-" in model_lower:
+            return 64000
+        return 32000
+    return 16000
 
 
 @dataclass
@@ -585,6 +603,15 @@ def call_single_model(
             actual_model = f"bedrock/{model}"
 
     system_prompt = get_system_prompt(doc_type, persona)
+    # GPT-5.5 (esp. -pro) spends heavily on hidden reasoning and can exhaust its
+    # output budget before emitting visible text ("max_output_tokens" hard-fail).
+    # Tell it explicitly to keep visible output tight so reasoning + answer fit.
+    if "gpt-5.5" in actual_model.lower():
+        system_prompt += (
+            "\n\nBREVITY: Keep your visible response concise. Make every critique "
+            "point sharp and short — no preamble, no restating the spec, no filler. "
+            "Spend your tokens on substance, not length."
+        )
     doc_type_name = get_doc_type_name(doc_type)
 
     focus_section = ""
@@ -775,15 +802,22 @@ def call_single_model(
                 "timeout": timeout,
             }
 
+            budget = output_token_budget(actual_model)
             if uses_max_completion_tokens(actual_model):
-                completion_kwargs["max_completion_tokens"] = 16000
+                completion_kwargs["max_completion_tokens"] = budget
             else:
-                completion_kwargs["max_tokens"] = 16000
+                completion_kwargs["max_tokens"] = budget
             if not is_reasoning_model(actual_model):
                 completion_kwargs["temperature"] = 0.7
 
             response = completion(**completion_kwargs)
             content = response.choices[0].message.content or ""
+            finish_reason = getattr(response.choices[0], "finish_reason", None)
+            if finish_reason == "length" and not content.strip():
+                raise RuntimeError(
+                    f"{actual_model} exhausted its {budget}-token output budget on "
+                    "reasoning before producing visible output. Budget too low for this model."
+                )
             agreed = "[AGREE]" in content
             extracted = extract_spec(content)
 

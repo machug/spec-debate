@@ -32,7 +32,7 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
           ║                                                  ║
           ║  Skill.......: spec-debate                       ║
           ║  Author......: machug          (hughtec.com)     ║
-          ║  Version.....: 1.5.1                             ║
+          ║  Version.....: 1.6.0                             ║
           ║  Origin......: fork of zscole/adversarial-spec   ║
           ║  Released....: 2026                              ║
           ║  License.....: MIT                               ║
@@ -67,17 +67,17 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.5-mini`, `gpt-5.3-codex`, `o3-pro`, `o4-mini` |
+| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4-mini`, `gpt-5.3-codex`, `o3-pro`, `o4-mini` |
 | Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
-| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4.3-reasoning`, `xai/grok-4.3-fast`, `xai/grok-4.20-0309-reasoning` |
+| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.5-flash`, `gemini/gemini-2.5-pro` |
+| xAI        | `XAI_API_KEY`          | `xai/grok-4.3`, `xai/grok-4.20-0309-reasoning`, `xai/grok-4.20-0309-non-reasoning` |
 | Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
 | OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.5-pro`, `openrouter/anthropic/claude-opus-4.7` |
 | Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
 | ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
-| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.6`, `moonshot/kimi-k2-thinking`, `moonshot/kimi-k2.5` |
+| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.6`, `moonshot/kimi-k2.5` |
 | Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.5`, `codex/gpt-5.3-codex` (gpt-5.5-pro requires `OPENAI_API_KEY`, not ChatGPT sub; gpt-5.5 unified the Codex line — no separate gpt-5.5-codex) |
 | Gemini CLI | (Google account)       | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
 
@@ -378,7 +378,7 @@ Then present available models to the user using AskUserQuestion with multiSelect
 **If OPENAI_API_KEY is set, include:**
 - `gpt-5.5` - Fast, good for general critique (unified Codex+GPT line)
 - `gpt-5.5-pro` - Stronger reasoning, slower (API-only; ChatGPT subscription blocks it)
-- `gpt-5.5-mini` - Lightweight, cost-effective
+- `gpt-5.4-mini` - Lightweight, cost-effective
 - `gpt-5.3-codex` - Prior Codex with extended reasoning
 - `o3-pro` - Advanced reasoning
 
@@ -391,14 +391,14 @@ Then present available models to the user using AskUserQuestion with multiSelect
 
 **If GEMINI_API_KEY is set, include:**
 - `gemini/gemini-3.1-pro-preview` - Latest Gemini Pro
+- `gemini/gemini-3.5-flash` - Latest Gemini Flash, fast ($1.5/$9 per 1M)
 - `gemini/gemini-2.5-pro` - Stable Gemini Pro
-- `gemini/gemini-2.5-flash` - Fast, cost-effective
+- `gemini/gemini-2.5-flash` - Cheap, cost-effective
 
 **If XAI_API_KEY is set, include:**
-- `xai/grok-4.3-reasoning` - Latest flagship Grok with reasoning (2M context)
-- `xai/grok-4.3-fast` - Fast Grok variant
+- `xai/grok-4.3` - Latest flagship Grok ($1.25/$2.5 per 1M)
 - `xai/grok-4.20-0309-reasoning` - Prior flagship with reasoning ($2/$6 per 1M)
-- `xai/grok-4-1-fast-reasoning` - Prior fast Grok with reasoning ($0.20/$0.50 per 1M)
+- `xai/grok-4.20-0309-non-reasoning` - Prior flagship, no reasoning
 
 **If AZURE_AI_API_KEY is set, include:**
 - `foundry/claude-opus-4-7` - Claude via Azure Foundry
@@ -422,9 +422,8 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `zai/glm-5` - Stable GLM
 
 **If MOONSHOT_API_KEY is set, include:**
-- `moonshot/kimi-k2.6` - Latest Kimi (April 2026, long-horizon agentic)
-- `moonshot/kimi-k2-thinking` - Deep reasoning variant
-- `moonshot/kimi-k2.5` - Prior generation
+- `moonshot/kimi-k2.6` - Latest Kimi (April 2026, long-horizon agentic; temp fixed at 1)
+- `moonshot/kimi-k2.5` - Prior generation (temp fixed at 1)
 
 **If Codex CLI is installed, include:**
 - `codex/gpt-5.5` - GPT-5.5 via Codex CLI (works on ChatGPT subscription; unified Codex+GPT)

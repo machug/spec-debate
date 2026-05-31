@@ -5,8 +5,8 @@ Sends specs to multiple LLMs for critique using LiteLLM.
 
 Usage:
     echo "spec" | python3 debate.py critique --models gpt-5.5
-    echo "spec" | python3 debate.py critique --models gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.3-reasoning --doc-type prd
-    echo "spec" | python3 debate.py critique --models codex/gpt-5.5-codex,gemini/gemini-3.1-pro-preview --doc-type tech
+    echo "spec" | python3 debate.py critique --models gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.3 --doc-type prd
+    echo "spec" | python3 debate.py critique --models codex/gpt-5.3-codex,gemini/gemini-3.1-pro-preview --doc-type tech
     echo "spec" | python3 debate.py critique --models gpt-5.5 --focus security
     echo "spec" | python3 debate.py critique --models gpt-5.5 --persona "security engineer"
     echo "spec" | python3 debate.py critique --models gpt-5.5 --context ./api.md --context ./schema.sql
@@ -21,18 +21,18 @@ Usage:
     python3 debate.py sessions
 
 Supported providers (set corresponding API key):
-    OpenAI:     OPENAI_API_KEY       models: gpt-5.5, gpt-5.5-pro, gpt-5.5-mini, o3-pro, o4-mini, etc.
+    OpenAI:     OPENAI_API_KEY       models: gpt-5.5, gpt-5.5-pro, gpt-5.4-mini, o3-pro, o4-mini, etc.
     Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5, etc.
-    Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-2.5-pro, gemini/gemini-2.5-flash, etc.
-    xAI:        XAI_API_KEY          models: xai/grok-4.3-reasoning, xai/grok-4.3-fast, xai/grok-4.20-0309-reasoning, etc.
+    Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-3.5-flash, gemini/gemini-2.5-pro, etc.
+    xAI:        XAI_API_KEY          models: xai/grok-4.3, xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning, etc.
     Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-7, foundry/grok-4, foundry/Phi-4-reasoning, etc.
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
     Groq:       GROQ_API_KEY         models: groq/llama-3.3-70b, etc.
     OpenRouter: OPENROUTER_API_KEY   models: openrouter/openai/gpt-5.5-pro, openrouter/anthropic/claude-opus-4.7, etc.
     Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, deepseek/deepseek-chat, etc.
     ZAI (GLM):  ZAI_API_KEY          models: zai/glm-5.1, zai/glm-5-turbo, zai/glm-5, etc.
-    Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.6, moonshot/kimi-k2-thinking, moonshot/kimi-k2.5, etc.
-    Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.5-codex, codex/gpt-5.3-codex
+    Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.6, moonshot/kimi-k2.5, etc.
+    Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.5, codex/gpt-5.3-codex
                 Install: npm install -g @openai/codex && codex login
                 Reasoning: --codex-reasoning xhigh (minimal, low, medium, high, xhigh)
 
@@ -241,7 +241,7 @@ def add_core_arguments(parser: argparse.ArgumentParser) -> None:
         "--models",
         "-m",
         default=None,
-        help="Comma-separated list of models (e.g., gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.3-reasoning)",
+        help="Comma-separated list of models (e.g., gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.3)",
     )
     parser.add_argument(
         "--doc-type",
@@ -763,7 +763,7 @@ def parse_models(args: argparse.Namespace) -> list[str]:
                 "  Google:    Set GEMINI_API_KEY for gemini/gemini-3.1-pro-preview, etc.",
                 file=sys.stderr,
             )
-            print("  xAI:       Set XAI_API_KEY for xai/grok-4.3-reasoning, xai/grok-4.3-fast, etc.", file=sys.stderr)
+            print("  xAI:       Set XAI_API_KEY for xai/grok-4.3, xai/grok-4.20-0309-reasoning, etc.", file=sys.stderr)
             print("  Azure AI:  Set AZURE_AI_API_KEY for foundry/claude-opus-4-7, etc.", file=sys.stderr)
             print(
                 "  Mistral:   Set MISTRAL_API_KEY for mistral/mistral-large, etc.",
