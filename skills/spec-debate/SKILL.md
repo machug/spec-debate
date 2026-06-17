@@ -78,6 +78,7 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 | Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
 | ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.6`, `moonshot/kimi-k2.5` |
+| MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.5` |
 | Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.5`, `codex/gpt-5.3-codex` (gpt-5.5-pro requires `OPENAI_API_KEY`, not ChatGPT sub; gpt-5.5 unified the Codex line — no separate gpt-5.5-codex) |
 | Gemini CLI | (Google account)       | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
 
@@ -424,6 +425,11 @@ Then present available models to the user using AskUserQuestion with multiSelect
 **If MOONSHOT_API_KEY is set, include:**
 - `moonshot/kimi-k2.6` - Latest Kimi (April 2026, long-horizon agentic; temp fixed at 1)
 - `moonshot/kimi-k2.5` - Prior generation (temp fixed at 1)
+
+**If MINIMAX_API_KEY is set, include:**
+- `minimax/MiniMax-M3` - Latest MiniMax flagship (thinking model; accepts temperature)
+- `minimax/MiniMax-M2.5` - Prior generation
+- Note: routed via litellm to the international endpoint (`api.minimax.io`). For the China endpoint set `MINIMAX_API_BASE=https://api.minimaxi.com/v1`.
 
 **If Codex CLI is installed, include:**
 - `codex/gpt-5.5` - GPT-5.5 via Codex CLI (works on ChatGPT subscription; unified Codex+GPT)
