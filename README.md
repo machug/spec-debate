@@ -316,6 +316,7 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 | `--persona` | Professional persona for critique |
 | `--context, -c` | Context file (repeatable) |
 | `--preserve-intent` | Require justification for removals |
+| `--review-only` | Judge mode: emit `[AGREE]` or short critique, never re-emit spec (for `gpt-5.5-pro`/`claude-opus-4-7` as a final acceptance gate) |
 | `--session, -s` | Session ID for persistence |
 | `--resume` | Resume a previous session |
 | `--profile` | Load saved profile |

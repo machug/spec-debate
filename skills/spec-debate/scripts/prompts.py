@@ -390,8 +390,41 @@ Rules for the plan content:
 9. **Output only the plan document.** No preamble, no meta-commentary. Start directly with the `#` heading. Do NOT wrap the output in code fences."""
 
 
-def get_system_prompt(doc_type: str, persona: Optional[str] = None) -> str:
-    """Get the system prompt for a given document type and optional persona."""
+REVIEWER_SUFFIX = """
+
+**REVIEW-ONLY MODE — DO NOT REPRODUCE THE SPEC.**
+You are acting as a final reviewer/judge, not an editor. The full document is
+already held by the author. Your job is a verdict, not a rewrite.
+
+- If the document is production-ready: output exactly [AGREE] on its own line,
+  optionally preceded by a one-line reason. Nothing else.
+- If it is not: output a short numbered critique of blocking issues only
+  (most important first). Be specific and reference sections.
+
+Do NOT output the document. Do NOT use [SPEC] tags. Do NOT restate large
+portions of the document. Keep your response tight — a verdict and, if needed,
+a focused critique the author can act on."""
+
+
+def get_system_prompt(
+    doc_type: str, persona: Optional[str] = None, review_only: bool = False
+) -> str:
+    """Get the system prompt for a given document type and optional persona.
+
+    When review_only is True, the model is instructed to act as a final
+    reviewer/judge: emit [AGREE] or a short critique, and never re-emit the
+    spec. This lets deep reasoners (gpt-5.5-pro) and Opus gate acceptance
+    without exhausting their output budget re-typing a long document.
+    """
+    if review_only:
+        base = _base_system_prompt(doc_type, persona)
+        return base + REVIEWER_SUFFIX
+
+    return _base_system_prompt(doc_type, persona)
+
+
+def _base_system_prompt(doc_type: str, persona: Optional[str] = None) -> str:
+    """The standard (spec-emitting) system prompt for a doc type / persona."""
     if persona:
         persona_key = persona.lower().replace(" ", "-").replace("_", "-")
         if persona_key in PERSONAS:

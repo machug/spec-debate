@@ -110,6 +110,46 @@ def output_token_budget(model: str) -> int:
     return 16000
 
 
+def gpt5_tuning_params(model: str) -> dict:
+    """Output-control params for GPT-5 family models.
+
+    Reasoning models spend hidden reasoning tokens out of the same budget as
+    visible output. The proper levers (vs. a prose "be brief" instruction) are:
+    - verbosity=low: shortens *visible* output without touching reasoning depth.
+    - reasoning_effort=medium: caps reasoning spend for the in-loop debaters so a
+      full spec re-emit fits the budget.
+
+    The `-pro` tier is a deep reasoner; forcing medium effort defeats its
+    purpose, so pro keeps its default effort and only gets verbosity capped.
+    (Pro should generally run as a review-only judge, where it never re-emits.)
+
+    Returns kwargs to merge into the litellm completion call. Empty for
+    non-GPT-5 models.
+    """
+    model_lower = model.lower()
+    if "gpt-5" not in model_lower:
+        return {}
+    params: dict = {"extra_body": {"text": {"verbosity": "low"}}}
+    is_pro = "-pro" in model_lower or "pro-" in model_lower
+    if not is_pro:
+        params["reasoning_effort"] = "medium"
+    return params
+
+
+def should_warn_missing_spec(
+    agreed: bool, extracted: Optional[str], review_only: bool
+) -> bool:
+    """Whether to warn that a response lacked [SPEC] tags.
+
+    In review-only mode the model is a judge and is not expected to re-emit the
+    spec, so a missing [SPEC] block is normal — never warn. Otherwise warn when
+    the model neither agreed nor produced a spec (likely malformed output).
+    """
+    if review_only:
+        return False
+    return not agreed and not extracted
+
+
 @dataclass
 class ModelResponse:
     """Response from a model critique."""
@@ -592,8 +632,15 @@ def call_single_model(
     timeout: int = 600,
     bedrock_mode: bool = False,
     bedrock_region: Optional[str] = None,
+    review_only: bool = False,
 ) -> ModelResponse:
-    """Send spec to a single model and return response with retry on failure."""
+    """Send spec to a single model and return response with retry on failure.
+
+    When review_only is True, the model acts as a final reviewer/judge: it emits
+    [AGREE] or a short critique and never re-emits the spec. This keeps deep
+    reasoners (gpt-5.5-pro) and Opus inside the debate as acceptance gates
+    without exhausting their output budget re-typing a long document.
+    """
     # Handle Bedrock routing
     actual_model = model
     if bedrock_mode:
@@ -602,16 +649,7 @@ def call_single_model(
         if not model.startswith("bedrock/"):
             actual_model = f"bedrock/{model}"
 
-    system_prompt = get_system_prompt(doc_type, persona)
-    # GPT-5.5 (esp. -pro) spends heavily on hidden reasoning and can exhaust its
-    # output budget before emitting visible text ("max_output_tokens" hard-fail).
-    # Tell it explicitly to keep visible output tight so reasoning + answer fit.
-    if "gpt-5.5" in actual_model.lower():
-        system_prompt += (
-            "\n\nBREVITY: Keep your visible response concise. Make every critique "
-            "point sharp and short — no preamble, no restating the spec, no filler. "
-            "Spend your tokens on substance, not length."
-        )
+    system_prompt = get_system_prompt(doc_type, persona, review_only)
     doc_type_name = get_doc_type_name(doc_type)
 
     focus_section = ""
@@ -650,7 +688,7 @@ def call_single_model(
                 agreed = "[AGREE]" in content
                 extracted = extract_spec(content)
 
-                if not agreed and not extracted:
+                if should_warn_missing_spec(agreed, extracted, review_only):
                     print(
                         f"Warning: {model} provided critique but no [SPEC] tags found. Response may be malformed.",
                         file=sys.stderr,
@@ -700,7 +738,7 @@ def call_single_model(
                 agreed = "[AGREE]" in content
                 extracted = extract_spec(content)
 
-                if not agreed and not extracted:
+                if should_warn_missing_spec(agreed, extracted, review_only):
                     print(
                         f"Warning: {model} provided critique but no [SPEC] tags found. Response may be malformed.",
                         file=sys.stderr,
@@ -750,7 +788,7 @@ def call_single_model(
                 agreed = "[AGREE]" in content
                 extracted = extract_spec(content)
 
-                if not agreed and not extracted:
+                if should_warn_missing_spec(agreed, extracted, review_only):
                     print(
                         f"Warning: {model} provided critique but no [SPEC] tags found. Response may be malformed.",
                         file=sys.stderr,
@@ -810,6 +848,10 @@ def call_single_model(
             if not is_reasoning_model(actual_model):
                 completion_kwargs["temperature"] = 0.7
 
+            # GPT-5 family: cap visible verbosity and (non-pro) reasoning effort
+            # so reasoning + output fit the budget. Replaces the old prose hint.
+            completion_kwargs.update(gpt5_tuning_params(actual_model))
+
             response = completion(**completion_kwargs)
             content = response.choices[0].message.content or ""
             finish_reason = getattr(response.choices[0], "finish_reason", None)
@@ -821,7 +863,7 @@ def call_single_model(
             agreed = "[AGREE]" in content
             extracted = extract_spec(content)
 
-            if not agreed and not extracted:
+            if should_warn_missing_spec(agreed, extracted, review_only):
                 print(
                     f"Warning: {display_model} provided critique but no [SPEC] tags found. Response may be malformed.",
                     file=sys.stderr,
@@ -884,6 +926,7 @@ def call_models_parallel(
     timeout: int = 600,
     bedrock_mode: bool = False,
     bedrock_region: Optional[str] = None,
+    review_only: bool = False,
 ) -> list[ModelResponse]:
     """Call multiple models in parallel and collect responses."""
     if not models:
@@ -907,6 +950,7 @@ def call_models_parallel(
                 timeout,
                 bedrock_mode,
                 bedrock_region,
+                review_only,
             ): model
             for model in models
         }

@@ -642,7 +642,7 @@ After the user review period, or if explicitly requested:
    ```
 
 **Use cases for additional cycles:**
-- First cycle with faster/cheaper models (gpt-5-mini), second cycle with stronger models (gpt-5.5-pro, claude-opus)
+- First cycle with faster/cheaper models (gpt-5-mini), then a **final acceptance gate** with deep reasoners in judge mode: `--models gpt-5.5-pro,claude-opus-4-7 --review-only` (they emit `[AGREE]` or a short critique without re-emitting the spec — see "Final Reviewer / Judge Mode")
 - First cycle for structure and completeness, second cycle for security or performance focus
 - Fresh perspective after user-requested changes
 
@@ -920,6 +920,45 @@ This shifts the default from "sand off anything unusual" to "add protective deta
 
 Can be combined with other flags: `--preserve-intent --focus security`
 
+### Final Reviewer / Judge Mode (`--review-only`)
+
+Deep reasoners (`gpt-5.5-pro`) and `claude-opus-4-7` share one token budget for
+hidden reasoning **and** visible output. In the normal loop every model must
+re-emit the *entire* spec inside `[SPEC]` tags each round — for a long spec a
+deep reasoner spends its budget on reasoning, then runs out before it can re-type
+the document, hard-failing with `max_output_tokens`. That's why pro was being
+auto-skipped.
+
+`--review-only` puts a model in **judge mode**: it emits `[AGREE]` or a short
+numbered critique and **never re-emits the spec**. A verdict is ~1–2k tokens, so
+the output cap is never hit — pro and Opus can gate acceptance reliably.
+
+```bash
+# Cheap/standard models converge first (they re-emit and edit):
+python3 debate.py critique --models gpt-5.5,gemini/gemini-3.1-pro-preview --doc-type tech <<'SPEC_EOF'
+<spec here>
+SPEC_EOF
+
+# Then a final acceptance gate with deep reasoners — no re-emit, no cap:
+python3 debate.py critique --models gpt-5.5-pro,claude-opus-4-7 --review-only --doc-type tech <<'SPEC_EOF'
+<converged spec here>
+SPEC_EOF
+```
+
+If the reviewers `[AGREE]`, accept. If they raise blocking issues, feed those
+back to the in-loop debaters (which can re-emit) for another round, then re-run
+the reviewer gate.
+
+**Why this is the right split:** in-loop debaters now also get real output
+controls — for GPT-5 models the skill sets `verbosity=low` and (non-pro)
+`reasoning_effort=medium` so reasoning + full re-emit fit the budget. Pro keeps
+its deep reasoning and is used where it shines: judging, not re-typing.
+
+**Use when:**
+- You want `gpt-5.5-pro` and/or `claude-opus-4-7` as a final acceptance gate
+- A model keeps failing with `max_output_tokens` on full re-emit
+- You want a cheap convergence loop followed by a high-capability sign-off
+
 ### Cost Tracking
 
 Every critique round displays token usage and estimated cost:
@@ -1062,6 +1101,7 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 - `--context, -c` - Context file (can be used multiple times)
 - `--profile` - Load settings from saved profile
 - `--preserve-intent` - Require explicit justification for any removal
+- `--review-only` - Judge mode: emit `[AGREE]` or a short critique, never re-emit the spec (for `gpt-5.5-pro`/`claude-opus-4-7` as a final acceptance gate)
 - `--session, -s` - Session ID for persistence and checkpointing
 - `--resume` - Resume a previous session by ID
 - `--press, -p` - Anti-laziness check for early agreement

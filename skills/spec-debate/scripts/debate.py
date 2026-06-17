@@ -311,6 +311,13 @@ def add_critique_modifiers(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Require explicit justification for any removal or substantial modification",
     )
+    parser.add_argument(
+        "--review-only",
+        action="store_true",
+        help="Reviewer/judge mode: models emit [AGREE] or a short critique and do "
+        "NOT re-emit the spec. Use for deep reasoners (gpt-5.5-pro) and Opus as a "
+        "final acceptance gate without hitting their output-token cap.",
+    )
 
 
 def add_session_arguments(parser: argparse.ArgumentParser) -> None:
@@ -1161,7 +1168,12 @@ def run_critique(
         bedrock_mode: Whether Bedrock mode is enabled.
         bedrock_region: AWS region for Bedrock.
     """
-    mode = "pressing for confirmation" if args.press else "critiquing"
+    if getattr(args, "review_only", False):
+        mode = "reviewing (judge mode, no re-emit)"
+    elif args.press:
+        mode = "pressing for confirmation"
+    else:
+        mode = "critiquing"
     focus_info = f" (focus: {args.focus})" if args.focus else ""
     persona_info = f" (persona: {args.persona})" if args.persona else ""
     preserve_info = " (preserve-intent)" if args.preserve_intent else ""
@@ -1186,6 +1198,7 @@ def run_critique(
         args.timeout,
         bedrock_mode,
         bedrock_region,
+        getattr(args, "review_only", False),
     )
 
     errors = [r for r in results if r.error]
