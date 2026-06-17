@@ -108,6 +108,16 @@ class TestValidateModelCredentials:
         valid, invalid = validate_model_credentials(["moonshot/kimi-k2-thinking"])
         assert "moonshot/kimi-k2-thinking" in invalid
 
+    def test_minimax_valid_with_key(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+        valid, invalid = validate_model_credentials(["minimax/MiniMax-M3"])
+        assert "minimax/MiniMax-M3" in valid
+
+    def test_minimax_invalid_without_key(self, monkeypatch):
+        monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
+        valid, invalid = validate_model_credentials(["minimax/MiniMax-M3"])
+        assert "minimax/MiniMax-M3" in invalid
+
     def test_unknown_prefix_assumed_valid(self, monkeypatch):
         # Unknown provider prefixes pass through (for openrouter, etc.)
         valid, invalid = validate_model_credentials(["openrouter/openai/gpt-5.2-pro"])

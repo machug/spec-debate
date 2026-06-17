@@ -92,6 +92,7 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 | Deepseek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
 | ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.6`, `moonshot/kimi-k2.5` |
+| MiniMax | `MINIMAX_API_KEY` | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.5` |
 | Codex CLI | ChatGPT subscription | `codex/gpt-5.5`, `codex/gpt-5.3-codex` |
 | Gemini CLI | Google account | `gemini-cli/gemini-3.1-pro-preview` |
 

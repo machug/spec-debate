@@ -311,6 +311,7 @@ def list_providers():
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, deepseek/deepseek-chat"),
         ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.1, zai/glm-5-turbo, zai/glm-5"),
         ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.6, moonshot/kimi-k2.5"),
+        ("MiniMax", "MINIMAX_API_KEY", "minimax/MiniMax-M3, minimax/MiniMax-M2.5"),
     ]
 
     if bedrock_config.get("enabled"):
@@ -396,6 +397,7 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro"),
         ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.1"),
         ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.6"),
+        ("MiniMax", "MINIMAX_API_KEY", "minimax/MiniMax-M3"),
     ]
 
     available: list[tuple[str, Optional[str], str]] = []
@@ -472,6 +474,7 @@ def validate_model_credentials(models: list[str]) -> tuple[list[str], list[str]]
         "zai/": "ZAI_API_KEY",
         "zhipu/": "ZHIPUAI_API_KEY",  # Legacy prefix, use zai/ instead
         "moonshot/": "MOONSHOT_API_KEY",
+        "minimax/": "MINIMAX_API_KEY",
         "codex/": None,  # Uses ChatGPT subscription, not API key
         "gemini-cli/": None,  # Uses Google account, not API key
     }
@@ -690,6 +693,25 @@ def discover_models() -> dict[str, list[str]]:
             results["Moonshot (Kimi)"] = [f"moonshot/{m}" for m in models]
         except Exception as e:
             results["Moonshot (Kimi)"] = [f"[error: {e}]"]
+
+    # MiniMax — OpenAI-compatible /v1/models (international endpoint)
+    api_key = os.environ.get("MINIMAX_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                "https://api.minimax.io/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            models = sorted(
+                m["id"]
+                for m in data.get("data", [])
+                if "minimax" in m["id"].lower() and "speech" not in m["id"].lower()
+            )
+            results["MiniMax"] = [f"minimax/{m}" for m in models]
+        except Exception as e:
+            results["MiniMax"] = [f"[error: {e}]"]
 
     # Azure AI Foundry — region-scoped catalog via az cli
     if os.environ.get("AZURE_AI_API_KEY"):
