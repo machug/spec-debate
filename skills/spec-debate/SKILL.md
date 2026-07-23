@@ -67,18 +67,18 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4-mini`, `gpt-5.3-codex`, `o3-pro`, `o4-mini` |
+| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro`, `o3-pro` |
 | Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
-| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.5-flash`, `gemini/gemini-2.5-pro` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4.3`, `xai/grok-4.20-0309-reasoning`, `xai/grok-4.20-0309-non-reasoning` |
+| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.6-flash`, `gemini/gemini-3.5-flash` |
+| xAI        | `XAI_API_KEY`          | `xai/grok-4.5`, `xai/grok-4.3`, `xai/grok-4.20-0309-reasoning` |
 | Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
 | OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.5-pro`, `openrouter/anthropic/claude-opus-4.7` |
 | Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
-| ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
-| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.6`, `moonshot/kimi-k2.5` |
-| MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.5` |
+| ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.2`, `zai/glm-5.1`, `zai/glm-5-turbo` |
+| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
+| MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
 | Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.5`, `codex/gpt-5.3-codex` (gpt-5.5-pro requires `OPENAI_API_KEY`, not ChatGPT sub; gpt-5.5 unified the Codex line — no separate gpt-5.5-codex) |
 | Gemini CLI | (Google account)       | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
 
@@ -377,11 +377,12 @@ cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py provide
 Then present available models to the user using AskUserQuestion with multiSelect. Build the options list based on the discover-models output. If discover-models was not run, use these defaults per provider:
 
 **If OPENAI_API_KEY is set, include:**
-- `gpt-5.5` - Fast, good for general critique (unified Codex+GPT line)
+- `gpt-5.6-sol` - Latest flagship (July 2026, $5/$30 per 1M)
+- `gpt-5.6-terra` - Mid tier ($2.5/$15 per 1M)
+- `gpt-5.6-luna` - Small/cheap tier ($1/$6 per 1M)
+- `gpt-5.5` - Prior flagship, good for general critique (unified Codex+GPT line)
 - `gpt-5.5-pro` - Stronger reasoning, slower (API-only; ChatGPT subscription blocks it)
 - `gpt-5.4-mini` - Lightweight, cost-effective
-- `gpt-5.3-codex` - Prior Codex with extended reasoning
-- `o3-pro` - Advanced reasoning
 
 **If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-5.5`, `codex/gpt-5.3-codex`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
 
@@ -392,14 +393,14 @@ Then present available models to the user using AskUserQuestion with multiSelect
 
 **If GEMINI_API_KEY is set, include:**
 - `gemini/gemini-3.1-pro-preview` - Latest Gemini Pro
-- `gemini/gemini-3.5-flash` - Latest Gemini Flash, fast ($1.5/$9 per 1M)
+- `gemini/gemini-3.6-flash` - Latest Gemini Flash ($1.5/$7.5 per 1M)
+- `gemini/gemini-3.5-flash` - Prior Gemini Flash, fast
 - `gemini/gemini-2.5-pro` - Stable Gemini Pro
-- `gemini/gemini-2.5-flash` - Cheap, cost-effective
 
 **If XAI_API_KEY is set, include:**
-- `xai/grok-4.3` - Latest flagship Grok ($1.25/$2.5 per 1M)
-- `xai/grok-4.20-0309-reasoning` - Prior flagship with reasoning ($2/$6 per 1M)
-- `xai/grok-4.20-0309-non-reasoning` - Prior flagship, no reasoning
+- `xai/grok-4.5` - Latest flagship Grok ($2/$6 per 1M; hybrid reasoner, accepts temperature)
+- `xai/grok-4.3` - Prior flagship ($1.25/$2.5 per 1M)
+- `xai/grok-4.20-0309-reasoning` - Older flagship with reasoning ($2/$6 per 1M)
 
 **If AZURE_AI_API_KEY is set, include:**
 - `foundry/claude-opus-4-7` - Claude via Azure Foundry
@@ -418,17 +419,18 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `deepseek/deepseek-chat` - Legacy alias, cost-effective
 
 **If ZAI_API_KEY is set, include:**
-- `zai/glm-5.1` - Latest GLM (April 2026, MIT license, agentic)
+- `zai/glm-5.2` - Latest GLM (July 2026)
+- `zai/glm-5.1` - Prior GLM (April 2026, MIT license, agentic)
 - `zai/glm-5-turbo` - Fast GLM variant
-- `zai/glm-5` - Stable GLM
 
 **If MOONSHOT_API_KEY is set, include:**
-- `moonshot/kimi-k2.6` - Latest Kimi (April 2026, long-horizon agentic; temp fixed at 1)
-- `moonshot/kimi-k2.5` - Prior generation (temp fixed at 1)
+- `moonshot/kimi-k3` - Latest Kimi flagship (July 2026; temp fixed at 1)
+- `moonshot/kimi-k2.7-code` - Code-tuned Kimi (temp fixed at 1)
+- `moonshot/kimi-k2.6` - Prior generation (temp fixed at 1)
 
 **If MINIMAX_API_KEY is set, include:**
 - `minimax/MiniMax-M3` - Latest MiniMax flagship (thinking model; accepts temperature)
-- `minimax/MiniMax-M2.5` - Prior generation
+- `minimax/MiniMax-M2.7` - Prior generation
 - Note: routed via litellm to the international endpoint (`api.minimax.io`). For the China endpoint set `MINIMAX_API_BASE=https://api.minimaxi.com/v1`.
 
 **If Codex CLI is installed, include:**
@@ -642,7 +644,7 @@ After the user review period, or if explicitly requested:
    ```
 
 **Use cases for additional cycles:**
-- First cycle with faster/cheaper models (gpt-5-mini), second cycle with stronger models (gpt-5.5-pro, claude-opus)
+- First cycle with faster/cheaper models (gpt-5-mini), then a **final acceptance gate** with deep reasoners in judge mode: `--models gpt-5.5-pro,claude-opus-4-7 --review-only` (they emit `[AGREE]` or a short critique without re-emitting the spec — see "Final Reviewer / Judge Mode")
 - First cycle for structure and completeness, second cycle for security or performance focus
 - Fresh perspective after user-requested changes
 
@@ -920,6 +922,45 @@ This shifts the default from "sand off anything unusual" to "add protective deta
 
 Can be combined with other flags: `--preserve-intent --focus security`
 
+### Final Reviewer / Judge Mode (`--review-only`)
+
+Deep reasoners (`gpt-5.5-pro`) and `claude-opus-4-7` share one token budget for
+hidden reasoning **and** visible output. In the normal loop every model must
+re-emit the *entire* spec inside `[SPEC]` tags each round — for a long spec a
+deep reasoner spends its budget on reasoning, then runs out before it can re-type
+the document, hard-failing with `max_output_tokens`. That's why pro was being
+auto-skipped.
+
+`--review-only` puts a model in **judge mode**: it emits `[AGREE]` or a short
+numbered critique and **never re-emits the spec**. A verdict is ~1–2k tokens, so
+the output cap is never hit — pro and Opus can gate acceptance reliably.
+
+```bash
+# Cheap/standard models converge first (they re-emit and edit):
+python3 debate.py critique --models gpt-5.5,gemini/gemini-3.1-pro-preview --doc-type tech <<'SPEC_EOF'
+<spec here>
+SPEC_EOF
+
+# Then a final acceptance gate with deep reasoners — no re-emit, no cap:
+python3 debate.py critique --models gpt-5.5-pro,claude-opus-4-7 --review-only --doc-type tech <<'SPEC_EOF'
+<converged spec here>
+SPEC_EOF
+```
+
+If the reviewers `[AGREE]`, accept. If they raise blocking issues, feed those
+back to the in-loop debaters (which can re-emit) for another round, then re-run
+the reviewer gate.
+
+**Why this is the right split:** in-loop debaters now also get real output
+controls — for GPT-5 models the skill sets `verbosity=low` and (non-pro)
+`reasoning_effort=medium` so reasoning + full re-emit fit the budget. Pro keeps
+its deep reasoning and is used where it shines: judging, not re-typing.
+
+**Use when:**
+- You want `gpt-5.5-pro` and/or `claude-opus-4-7` as a final acceptance gate
+- A model keeps failing with `max_output_tokens` on full re-emit
+- You want a cheap convergence loop followed by a high-capability sign-off
+
 ### Cost Tracking
 
 Every critique round displays token usage and estimated cost:
@@ -1062,6 +1103,7 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 - `--context, -c` - Context file (can be used multiple times)
 - `--profile` - Load settings from saved profile
 - `--preserve-intent` - Require explicit justification for any removal
+- `--review-only` - Judge mode: emit `[AGREE]` or a short critique, never re-emit the spec (for `gpt-5.5-pro`/`claude-opus-4-7` as a final acceptance gate)
 - `--session, -s` - Session ID for persistence and checkpointing
 - `--resume` - Resume a previous session by ID
 - `--press, -p` - Anti-laziness check for early agreement

@@ -287,14 +287,14 @@ def list_providers():
         print("-" * 60 + "\n")
 
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.5, gpt-5.5-pro, gpt-5.4-mini, gpt-5.3-codex, o3-pro, o4-mini"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5, gpt-5.5-pro, o3-pro"),
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
             "claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5",
         ),
-        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-3.5-flash, gemini/gemini-2.5-pro"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.3, xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning"),
+        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-3.6-flash, gemini/gemini-3.5-flash"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.5, xai/grok-4.3, xai/grok-4.20-0309-reasoning"),
         (
             "Azure AI Foundry",
             "AZURE_AI_API_KEY",
@@ -309,9 +309,9 @@ def list_providers():
             "openrouter/openai/gpt-5.5-pro, openrouter/anthropic/claude-opus-4.7",
         ),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, deepseek/deepseek-chat"),
-        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.1, zai/glm-5-turbo, zai/glm-5"),
-        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.6, moonshot/kimi-k2.5"),
-        ("MiniMax", "MINIMAX_API_KEY", "minimax/MiniMax-M3, minimax/MiniMax-M2.5"),
+        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.2, zai/glm-5.1, zai/glm-5-turbo"),
+        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k3, moonshot/kimi-k2.7-code, moonshot/kimi-k2.6"),
+        ("MiniMax", "MINIMAX_API_KEY", "minimax/MiniMax-M3, minimax/MiniMax-M2.7"),
     ]
 
     if bedrock_config.get("enabled"):
@@ -386,17 +386,17 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
         Note: env_var can be None for providers like Codex CLI that use alternative auth.
     """
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.5"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-5.6-sol"),
         ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-4-7"),
         ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.3"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.5"),
         # Azure AI Foundry skipped — deployment names are user-specific; use: test --models foundry/<name>
         ("Mistral", "MISTRAL_API_KEY", "mistral/mistral-large"),
         ("Groq", "GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),
         ("OpenRouter", "OPENROUTER_API_KEY", "openrouter/openai/gpt-5.5-pro"),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro"),
-        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.1"),
-        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k2.6"),
+        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.2"),
+        ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k3"),
         ("MiniMax", "MINIMAX_API_KEY", "minimax/MiniMax-M3"),
     ]
 

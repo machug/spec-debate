@@ -10,8 +10,11 @@ from models import (
     extract_tasks,
     generate_diff,
     get_critique_summary,
+    gpt5_tuning_params,
     is_reasoning_model,
+    should_warn_missing_spec,
 )
+from prompts import get_system_prompt
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +62,18 @@ class TestIsReasoningModel:
         assert is_reasoning_model("xai/grok-4.20-0309-reasoning")
         assert not is_reasoning_model("xai/grok-4-0709")
         assert not is_reasoning_model("xai/grok-4-1-fast-non-reasoning")
+
+    def test_moonshot_kimi_reasoning(self):
+        assert is_reasoning_model("moonshot/kimi-k2.5")
+        assert is_reasoning_model("moonshot/kimi-k2.6")
+        assert is_reasoning_model("moonshot/kimi-k2.7-code")
+        assert is_reasoning_model("moonshot/kimi-k2.7-code-highspeed")
+        assert is_reasoning_model("moonshot/kimi-k3")
+
+    def test_grok_45_not_reasoning(self):
+        # grok-4.5 returns reasoning_content but accepts temperature —
+        # treat as standard so temperature/max_tokens handling applies
+        assert not is_reasoning_model("xai/grok-4.5")
 
     def test_case_insensitive(self):
         assert is_reasoning_model("GPT-5.4")
@@ -259,3 +274,101 @@ class TestGenerateDiff:
         diff = generate_diff("old text\n", "new text\n")
         assert "-old text" in diff
         assert "+new text" in diff
+
+
+# ---------------------------------------------------------------------------
+# gpt5_tuning_params
+# ---------------------------------------------------------------------------
+
+
+class TestGpt5TuningParams:
+    def test_non_gpt5_returns_empty(self):
+        assert gpt5_tuning_params("claude-opus-4-7") == {}
+        assert gpt5_tuning_params("gemini/gemini-3.1-pro-preview") == {}
+        assert gpt5_tuning_params("xai/grok-4.3") == {}
+        assert gpt5_tuning_params("o3-mini") == {}
+
+    def test_gpt5_sets_low_verbosity(self):
+        params = gpt5_tuning_params("gpt-5.5")
+        assert params["extra_body"]["text"]["verbosity"] == "low"
+
+    def test_gpt5_non_pro_sets_medium_reasoning_effort(self):
+        params = gpt5_tuning_params("gpt-5.5")
+        assert params["reasoning_effort"] == "medium"
+
+    def test_gpt56_variants_covered(self):
+        for model in ("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"):
+            params = gpt5_tuning_params(model)
+            assert params["extra_body"]["text"]["verbosity"] == "low"
+            assert params["reasoning_effort"] == "medium"
+
+    def test_gpt5_mini_sets_medium_reasoning_effort(self):
+        params = gpt5_tuning_params("gpt-5-mini")
+        assert params["reasoning_effort"] == "medium"
+
+    def test_pro_keeps_default_reasoning_effort(self):
+        # Pro is a deep reasoner; don't force medium effort. Still cap verbosity.
+        params = gpt5_tuning_params("gpt-5.5-pro")
+        assert "reasoning_effort" not in params
+        assert params["extra_body"]["text"]["verbosity"] == "low"
+
+    def test_works_with_provider_prefix(self):
+        params = gpt5_tuning_params("openrouter/openai/gpt-5.5")
+        assert params["reasoning_effort"] == "medium"
+        assert params["extra_body"]["text"]["verbosity"] == "low"
+
+    def test_pro_with_provider_prefix(self):
+        params = gpt5_tuning_params("openrouter/openai/gpt-5.5-pro")
+        assert "reasoning_effort" not in params
+
+    def test_case_insensitive(self):
+        params = gpt5_tuning_params("GPT-5.5")
+        assert params["reasoning_effort"] == "medium"
+
+
+# ---------------------------------------------------------------------------
+# should_warn_missing_spec
+# ---------------------------------------------------------------------------
+
+
+class TestShouldWarnMissingSpec:
+    def test_warns_when_no_agree_and_no_spec(self):
+        assert should_warn_missing_spec(agreed=False, extracted=None, review_only=False)
+
+    def test_no_warn_when_agreed(self):
+        assert not should_warn_missing_spec(agreed=True, extracted=None, review_only=False)
+
+    def test_no_warn_when_spec_present(self):
+        assert not should_warn_missing_spec(agreed=False, extracted="some spec", review_only=False)
+
+    def test_review_only_never_warns(self):
+        # Reviewers are not expected to re-emit a spec.
+        assert not should_warn_missing_spec(agreed=False, extracted=None, review_only=True)
+
+
+# ---------------------------------------------------------------------------
+# get_system_prompt — review-only mode
+# ---------------------------------------------------------------------------
+
+
+class TestReviewOnlyPrompt:
+    def test_review_only_instructs_no_reemit(self):
+        prompt = get_system_prompt("tech", review_only=True)
+        lowered = prompt.lower()
+        assert "[agree]" in lowered
+        assert "review-only" in lowered
+        # Must tell the model NOT to reproduce the spec.
+        assert "do not reproduce" in lowered or "do not output the document" in lowered
+
+    def test_review_only_works_for_prd(self):
+        prompt = get_system_prompt("prd", review_only=True)
+        assert "[AGREE]" in prompt
+
+    def test_default_still_requests_spec_tags(self):
+        prompt = get_system_prompt("tech")
+        assert "[SPEC]" in prompt
+
+    def test_review_only_overrides_persona(self):
+        # Even with a persona, review-only must apply the no-re-emit directive.
+        prompt = get_system_prompt("tech", persona="security-engineer", review_only=True)
+        assert "REVIEW-ONLY" in prompt

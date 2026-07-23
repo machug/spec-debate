@@ -311,6 +311,13 @@ def add_critique_modifiers(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Require explicit justification for any removal or substantial modification",
     )
+    parser.add_argument(
+        "--review-only",
+        action="store_true",
+        help="Reviewer/judge mode: models emit [AGREE] or a short critique and do "
+        "NOT re-emit the spec. Use for deep reasoners (gpt-5.5-pro) and Opus as a "
+        "final acceptance gate without hitting their output-token cap.",
+    )
 
 
 def add_session_arguments(parser: argparse.ArgumentParser) -> None:
@@ -499,6 +506,20 @@ def handle_test_command(args: argparse.Namespace) -> bool:
             print("Run 'python3 debate.py providers' to see options.", file=sys.stderr)
             return True
         models = [p[2] for p in available]
+
+    # A globally exported OPENAI_BASE_URL (e.g. an Azure proxy for another
+    # tool) silently reroutes litellm's OpenAI calls and fails with
+    # confusing auth errors on models the proxy doesn't serve.
+    base_url = os.environ.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_API_BASE")
+    if base_url and "api.openai.com" not in base_url and any(
+        m.startswith(("gpt-", "o1", "o3", "o4")) for m in models
+    ):
+        print(
+            f"Warning: OPENAI_BASE_URL is set to {base_url} — OpenAI models will "
+            "route there, not to api.openai.com. If that's unintended, run with "
+            "OPENAI_BASE_URL=https://api.openai.com/v1\n",
+            file=sys.stderr,
+        )
 
     print(f"Testing {len(models)} model(s)...\n")
 
@@ -1161,7 +1182,12 @@ def run_critique(
         bedrock_mode: Whether Bedrock mode is enabled.
         bedrock_region: AWS region for Bedrock.
     """
-    mode = "pressing for confirmation" if args.press else "critiquing"
+    if getattr(args, "review_only", False):
+        mode = "reviewing (judge mode, no re-emit)"
+    elif args.press:
+        mode = "pressing for confirmation"
+    else:
+        mode = "critiquing"
     focus_info = f" (focus: {args.focus})" if args.focus else ""
     persona_info = f" (persona: {args.persona})" if args.persona else ""
     preserve_info = " (preserve-intent)" if args.preserve_intent else ""
@@ -1186,6 +1212,7 @@ def run_critique(
         args.timeout,
         bedrock_mode,
         bedrock_region,
+        getattr(args, "review_only", False),
     )
 
     errors = [r for r in results if r.error]
