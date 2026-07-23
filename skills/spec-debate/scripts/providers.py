@@ -287,7 +287,7 @@ def list_providers():
         print("-" * 60 + "\n")
 
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5, gpt-5.5-pro, o3-pro"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5, gpt-5.5-pro"),
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
@@ -515,6 +515,25 @@ def validate_model_credentials(models: list[str]) -> tuple[list[str], list[str]]
             invalid.append(model)
 
     return valid, invalid
+
+
+def warn_openai_base_url_override(models: list[str]) -> None:
+    """Warn when a globally exported OPENAI_BASE_URL reroutes OpenAI models.
+
+    A base URL exported for another tool (e.g. an Azure proxy) silently
+    reroutes litellm's OpenAI calls and fails with confusing auth errors on
+    models the proxy doesn't serve.
+    """
+    base_url = os.environ.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_API_BASE")
+    if base_url and "api.openai.com" not in base_url and any(
+        m.startswith(("gpt-", "o1", "o3", "o4")) for m in models
+    ):
+        print(
+            f"Warning: OPENAI_BASE_URL is set to {base_url} — OpenAI models will "
+            "route there, not to api.openai.com. If that's unintended, run with "
+            "OPENAI_BASE_URL=https://api.openai.com/v1\n",
+            file=sys.stderr,
+        )
 
 
 def discover_models() -> dict[str, list[str]]:
