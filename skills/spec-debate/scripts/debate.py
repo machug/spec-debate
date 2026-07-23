@@ -106,6 +106,7 @@ from providers import (  # noqa: E402
     save_profile,
     validate_bedrock_models,
     validate_model_credentials,
+    warn_openai_base_url_override,
 )
 from session import SESSIONS_DIR, SessionState, save_checkpoint  # noqa: E402
 
@@ -507,19 +508,7 @@ def handle_test_command(args: argparse.Namespace) -> bool:
             return True
         models = [p[2] for p in available]
 
-    # A globally exported OPENAI_BASE_URL (e.g. an Azure proxy for another
-    # tool) silently reroutes litellm's OpenAI calls and fails with
-    # confusing auth errors on models the proxy doesn't serve.
-    base_url = os.environ.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_API_BASE")
-    if base_url and "api.openai.com" not in base_url and any(
-        m.startswith(("gpt-", "o1", "o3", "o4")) for m in models
-    ):
-        print(
-            f"Warning: OPENAI_BASE_URL is set to {base_url} — OpenAI models will "
-            "route there, not to api.openai.com. If that's unintended, run with "
-            "OPENAI_BASE_URL=https://api.openai.com/v1\n",
-            file=sys.stderr,
-        )
+    warn_openai_base_url_override(models)
 
     print(f"Testing {len(models)} model(s)...\n")
 
@@ -911,10 +900,12 @@ def handle_export_tasks(args: argparse.Namespace, models: list[str]) -> None:
             "messages": [{"role": "user", "content": prompt}],
         }
 
-        if is_reasoning_model(models[0]):
+        # Moonshot/xAI reasoning models need max_tokens, not max_completion_tokens
+        if uses_max_completion_tokens(models[0]):
             completion_kwargs["max_completion_tokens"] = 16000
         else:
             completion_kwargs["max_tokens"] = 16000
+        if not is_reasoning_model(models[0]):
             completion_kwargs["temperature"] = 0.3
 
         response = completion(**completion_kwargs)
@@ -1075,8 +1066,11 @@ def handle_emit_plan(args: argparse.Namespace, models: list[str]) -> None:
             "model": models[0],
             "messages": [{"role": "user", "content": prompt}],
         }
-        if is_reasoning_model(models[0]):
+        # Moonshot/xAI reasoning models need max_tokens, not max_completion_tokens
+        if uses_max_completion_tokens(models[0]):
             completion_kwargs["max_completion_tokens"] = EMIT_PLAN_MAX_REASONING_TOKENS
+        elif is_reasoning_model(models[0]):
+            completion_kwargs["max_tokens"] = EMIT_PLAN_MAX_REASONING_TOKENS
         else:
             completion_kwargs["max_tokens"] = EMIT_PLAN_MAX_TOKENS
             completion_kwargs["temperature"] = EMIT_PLAN_TEMPERATURE
@@ -1412,6 +1406,10 @@ def main() -> None:
 
     # Validate models have required credentials
     validate_models_before_run(models, bedrock_mode)
+
+    # Bedrock routes through AWS, so a stray OPENAI_BASE_URL is irrelevant there
+    if not bedrock_mode:
+        warn_openai_base_url_override(models)
 
     if args.action == "send-final":
         handle_send_final(args, models)

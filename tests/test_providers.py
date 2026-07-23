@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import pytest
-from providers import get_model_cost, validate_model_credentials
+from providers import (
+    get_model_cost,
+    validate_model_credentials,
+    warn_openai_base_url_override,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -122,3 +126,37 @@ class TestValidateModelCredentials:
         # Unknown provider prefixes pass through (for openrouter, etc.)
         valid, invalid = validate_model_credentials(["openrouter/openai/gpt-5.2-pro"])
         assert "openrouter/openai/gpt-5.2-pro" in valid
+
+
+# ---------------------------------------------------------------------------
+# warn_openai_base_url_override
+# ---------------------------------------------------------------------------
+
+
+class TestWarnOpenaiBaseUrlOverride:
+    def test_warns_on_foreign_base_url(self, monkeypatch, capsys):
+        monkeypatch.setenv("OPENAI_BASE_URL", "https://proxy.example.azure.com/openai/v1")
+        warn_openai_base_url_override(["gpt-5.6-sol"])
+        assert "OPENAI_BASE_URL" in capsys.readouterr().err
+
+    def test_silent_on_official_base_url(self, monkeypatch, capsys):
+        monkeypatch.setenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        warn_openai_base_url_override(["gpt-5.6-sol"])
+        assert capsys.readouterr().err == ""
+
+    def test_silent_when_unset(self, monkeypatch, capsys):
+        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+        monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+        warn_openai_base_url_override(["gpt-5.6-sol"])
+        assert capsys.readouterr().err == ""
+
+    def test_silent_without_openai_models(self, monkeypatch, capsys):
+        monkeypatch.setenv("OPENAI_BASE_URL", "https://proxy.example.azure.com/openai/v1")
+        warn_openai_base_url_override(["claude-opus-4-7", "moonshot/kimi-k3"])
+        assert capsys.readouterr().err == ""
+
+    def test_warns_on_openai_api_base_alias(self, monkeypatch, capsys):
+        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+        monkeypatch.setenv("OPENAI_API_BASE", "https://proxy.example.azure.com/openai/v1")
+        warn_openai_base_url_override(["o3-pro"])
+        assert "OPENAI_BASE_URL" in capsys.readouterr().err

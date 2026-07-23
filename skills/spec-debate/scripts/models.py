@@ -6,6 +6,7 @@ import concurrent.futures
 import difflib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -72,11 +73,13 @@ def is_reasoning_model(model: str) -> bool:
     # xAI reasoning models: grok-*-reasoning but NOT *-non-reasoning
     if "xai/" in model_lower and model_lower.endswith("-reasoning") and not model_lower.endswith("-non-reasoning"):
         return True
-    # Moonshot Kimi reasoning models (k2.5+ and k3 reject temperature, only allow 1)
-    if "moonshot/" in model_lower and any(
-        k in model_lower for k in ("k2.5", "k2.6", "k2.7", "k3")
-    ):
-        return True
+    # Moonshot Kimi reasoning models (kimi-k2.5 and later reject temperature,
+    # only allow 1). Anchor on the version segment after "kimi-k" so arbitrary
+    # "k3" substrings elsewhere in a model id don't match.
+    if "moonshot/" in model_lower:
+        m = re.search(r"kimi-k(\d+(?:\.\d+)?)", model_lower)
+        if m and float(m.group(1)) >= 2.5:
+            return True
     return False
 
 

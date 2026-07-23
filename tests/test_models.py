@@ -69,6 +69,19 @@ class TestIsReasoningModel:
         assert is_reasoning_model("moonshot/kimi-k2.7-code")
         assert is_reasoning_model("moonshot/kimi-k2.7-code-highspeed")
         assert is_reasoning_model("moonshot/kimi-k3")
+        # Future versions past k3 stay covered
+        assert is_reasoning_model("moonshot/kimi-k3.1")
+        assert is_reasoning_model("moonshot/kimi-k4")
+
+    def test_moonshot_kimi_non_reasoning(self):
+        # Pre-2.5 generations accepted temperature
+        assert not is_reasoning_model("moonshot/kimi-k2")
+        assert not is_reasoning_model("moonshot/kimi-k2-thinking")
+        assert not is_reasoning_model("moonshot/kimi-k1.5")
+        # No version segment after "kimi-k" — must not match
+        assert not is_reasoning_model("moonshot/kimi-latest")
+        # "k3" as an arbitrary substring must not match
+        assert not is_reasoning_model("moonshot/kimi-rk3-mini")
 
     def test_grok_45_not_reasoning(self):
         # grok-4.5 returns reasoning_content but accepts temperature —
