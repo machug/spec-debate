@@ -507,6 +507,20 @@ def handle_test_command(args: argparse.Namespace) -> bool:
             return True
         models = [p[2] for p in available]
 
+    # A globally exported OPENAI_BASE_URL (e.g. an Azure proxy for another
+    # tool) silently reroutes litellm's OpenAI calls and fails with
+    # confusing auth errors on models the proxy doesn't serve.
+    base_url = os.environ.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_API_BASE")
+    if base_url and "api.openai.com" not in base_url and any(
+        m.startswith(("gpt-", "o1", "o3", "o4")) for m in models
+    ):
+        print(
+            f"Warning: OPENAI_BASE_URL is set to {base_url} — OpenAI models will "
+            "route there, not to api.openai.com. If that's unintended, run with "
+            "OPENAI_BASE_URL=https://api.openai.com/v1\n",
+            file=sys.stderr,
+        )
+
     print(f"Testing {len(models)} model(s)...\n")
 
     for model in models:

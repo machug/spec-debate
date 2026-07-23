@@ -67,18 +67,18 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4-mini`, `gpt-5.3-codex`, `o3-pro`, `o4-mini` |
+| OpenAI     | `OPENAI_API_KEY`       | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro`, `o3-pro` |
 | Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
-| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.5-flash`, `gemini/gemini-2.5-pro` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4.3`, `xai/grok-4.20-0309-reasoning`, `xai/grok-4.20-0309-non-reasoning` |
+| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.6-flash`, `gemini/gemini-3.5-flash` |
+| xAI        | `XAI_API_KEY`          | `xai/grok-4.5`, `xai/grok-4.3`, `xai/grok-4.20-0309-reasoning` |
 | Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
 | OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.5-pro`, `openrouter/anthropic/claude-opus-4.7` |
 | Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
-| ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.1`, `zai/glm-5-turbo`, `zai/glm-5` |
-| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k2.6`, `moonshot/kimi-k2.5` |
-| MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.5` |
+| ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.2`, `zai/glm-5.1`, `zai/glm-5-turbo` |
+| Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
+| MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
 | Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.5`, `codex/gpt-5.3-codex` (gpt-5.5-pro requires `OPENAI_API_KEY`, not ChatGPT sub; gpt-5.5 unified the Codex line — no separate gpt-5.5-codex) |
 | Gemini CLI | (Google account)       | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
 
@@ -377,11 +377,12 @@ cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py provide
 Then present available models to the user using AskUserQuestion with multiSelect. Build the options list based on the discover-models output. If discover-models was not run, use these defaults per provider:
 
 **If OPENAI_API_KEY is set, include:**
-- `gpt-5.5` - Fast, good for general critique (unified Codex+GPT line)
+- `gpt-5.6-sol` - Latest flagship (July 2026, $5/$30 per 1M)
+- `gpt-5.6-terra` - Mid tier ($2.5/$15 per 1M)
+- `gpt-5.6-luna` - Small/cheap tier ($1/$6 per 1M)
+- `gpt-5.5` - Prior flagship, good for general critique (unified Codex+GPT line)
 - `gpt-5.5-pro` - Stronger reasoning, slower (API-only; ChatGPT subscription blocks it)
 - `gpt-5.4-mini` - Lightweight, cost-effective
-- `gpt-5.3-codex` - Prior Codex with extended reasoning
-- `o3-pro` - Advanced reasoning
 
 **If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-5.5`, `codex/gpt-5.3-codex`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
 
@@ -392,14 +393,14 @@ Then present available models to the user using AskUserQuestion with multiSelect
 
 **If GEMINI_API_KEY is set, include:**
 - `gemini/gemini-3.1-pro-preview` - Latest Gemini Pro
-- `gemini/gemini-3.5-flash` - Latest Gemini Flash, fast ($1.5/$9 per 1M)
+- `gemini/gemini-3.6-flash` - Latest Gemini Flash ($1.5/$7.5 per 1M)
+- `gemini/gemini-3.5-flash` - Prior Gemini Flash, fast
 - `gemini/gemini-2.5-pro` - Stable Gemini Pro
-- `gemini/gemini-2.5-flash` - Cheap, cost-effective
 
 **If XAI_API_KEY is set, include:**
-- `xai/grok-4.3` - Latest flagship Grok ($1.25/$2.5 per 1M)
-- `xai/grok-4.20-0309-reasoning` - Prior flagship with reasoning ($2/$6 per 1M)
-- `xai/grok-4.20-0309-non-reasoning` - Prior flagship, no reasoning
+- `xai/grok-4.5` - Latest flagship Grok ($2/$6 per 1M; hybrid reasoner, accepts temperature)
+- `xai/grok-4.3` - Prior flagship ($1.25/$2.5 per 1M)
+- `xai/grok-4.20-0309-reasoning` - Older flagship with reasoning ($2/$6 per 1M)
 
 **If AZURE_AI_API_KEY is set, include:**
 - `foundry/claude-opus-4-7` - Claude via Azure Foundry
@@ -418,17 +419,18 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `deepseek/deepseek-chat` - Legacy alias, cost-effective
 
 **If ZAI_API_KEY is set, include:**
-- `zai/glm-5.1` - Latest GLM (April 2026, MIT license, agentic)
+- `zai/glm-5.2` - Latest GLM (July 2026)
+- `zai/glm-5.1` - Prior GLM (April 2026, MIT license, agentic)
 - `zai/glm-5-turbo` - Fast GLM variant
-- `zai/glm-5` - Stable GLM
 
 **If MOONSHOT_API_KEY is set, include:**
-- `moonshot/kimi-k2.6` - Latest Kimi (April 2026, long-horizon agentic; temp fixed at 1)
-- `moonshot/kimi-k2.5` - Prior generation (temp fixed at 1)
+- `moonshot/kimi-k3` - Latest Kimi flagship (July 2026; temp fixed at 1)
+- `moonshot/kimi-k2.7-code` - Code-tuned Kimi (temp fixed at 1)
+- `moonshot/kimi-k2.6` - Prior generation (temp fixed at 1)
 
 **If MINIMAX_API_KEY is set, include:**
 - `minimax/MiniMax-M3` - Latest MiniMax flagship (thinking model; accepts temperature)
-- `minimax/MiniMax-M2.5` - Prior generation
+- `minimax/MiniMax-M2.7` - Prior generation
 - Note: routed via litellm to the international endpoint (`api.minimax.io`). For the China endpoint set `MINIMAX_API_BASE=https://api.minimaxi.com/v1`.
 
 **If Codex CLI is installed, include:**

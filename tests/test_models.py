@@ -63,6 +63,18 @@ class TestIsReasoningModel:
         assert not is_reasoning_model("xai/grok-4-0709")
         assert not is_reasoning_model("xai/grok-4-1-fast-non-reasoning")
 
+    def test_moonshot_kimi_reasoning(self):
+        assert is_reasoning_model("moonshot/kimi-k2.5")
+        assert is_reasoning_model("moonshot/kimi-k2.6")
+        assert is_reasoning_model("moonshot/kimi-k2.7-code")
+        assert is_reasoning_model("moonshot/kimi-k2.7-code-highspeed")
+        assert is_reasoning_model("moonshot/kimi-k3")
+
+    def test_grok_45_not_reasoning(self):
+        # grok-4.5 returns reasoning_content but accepts temperature —
+        # treat as standard so temperature/max_tokens handling applies
+        assert not is_reasoning_model("xai/grok-4.5")
+
     def test_case_insensitive(self):
         assert is_reasoning_model("GPT-5.4")
         assert is_reasoning_model("O3-Mini")
@@ -283,6 +295,12 @@ class TestGpt5TuningParams:
     def test_gpt5_non_pro_sets_medium_reasoning_effort(self):
         params = gpt5_tuning_params("gpt-5.5")
         assert params["reasoning_effort"] == "medium"
+
+    def test_gpt56_variants_covered(self):
+        for model in ("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"):
+            params = gpt5_tuning_params(model)
+            assert params["extra_body"]["text"]["verbosity"] == "low"
+            assert params["reasoning_effort"] == "medium"
 
     def test_gpt5_mini_sets_medium_reasoning_effort(self):
         params = gpt5_tuning_params("gpt-5-mini")

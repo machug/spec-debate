@@ -72,8 +72,10 @@ def is_reasoning_model(model: str) -> bool:
     # xAI reasoning models: grok-*-reasoning but NOT *-non-reasoning
     if "xai/" in model_lower and model_lower.endswith("-reasoning") and not model_lower.endswith("-non-reasoning"):
         return True
-    # Moonshot Kimi reasoning models (k2.5/k2.6 reject temperature, only allow 1)
-    if "moonshot/" in model_lower and ("k2.5" in model_lower or "k2.6" in model_lower):
+    # Moonshot Kimi reasoning models (k2.5+ and k3 reject temperature, only allow 1)
+    if "moonshot/" in model_lower and any(
+        k in model_lower for k in ("k2.5", "k2.6", "k2.7", "k3")
+    ):
         return True
     return False
 
