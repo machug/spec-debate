@@ -45,6 +45,20 @@ class TestNonRetryableErrors:
         assert is_non_retryable_error("litellm.AuthenticationError: bad key")
         assert is_non_retryable_error("Incorrect API key provided")
 
+    def test_antigravity_deterministic_errors(self):
+        assert is_non_retryable_error(
+            "Antigravity CLI is not authenticated. Run `agy` interactively once"
+        )
+        assert is_non_retryable_error(
+            "Antigravity CLI returned status ERROR: invalid model selection"
+        )
+
+    def test_bedrock_rewritten_errors(self):
+        assert is_non_retryable_error(
+            "Model not enabled in your Bedrock account: claude-opus-5"
+        )
+        assert is_non_retryable_error("Invalid Bedrock model ID: bogus.model")
+
     def test_transient_errors_still_retry(self):
         assert not is_non_retryable_error("rate limit exceeded")
         assert not is_non_retryable_error("connection reset by peer")
@@ -213,6 +227,37 @@ class TestAntigravityProvider:
         ):
             with pytest.raises(RuntimeError, match="not authenticated"):
                 models.call_antigravity_model("sys", "user", "antigravity")
+
+    def test_call_rejects_json_without_response_field(self):
+        payload = {"conversation_id": "abc", "status": "SUCCESS"}
+        fake = type(
+            "P", (), {"returncode": 0, "stdout": json.dumps(payload), "stderr": ""}
+        )()
+        with (
+            patch("models.ANTIGRAVITY_AVAILABLE", True),
+            patch("models.ANTIGRAVITY_PATH", "/usr/bin/agy"),
+            patch("models.subprocess.run", return_value=fake),
+        ):
+            with pytest.raises(RuntimeError, match="No response text"):
+                models.call_antigravity_model("sys", "user", "antigravity")
+
+    def test_call_falls_back_to_raw_text_output(self):
+        fake = type(
+            "P", (), {"returncode": 0, "stdout": "plain text answer", "stderr": ""}
+        )()
+        with (
+            patch("models.ANTIGRAVITY_AVAILABLE", True),
+            patch("models.ANTIGRAVITY_PATH", "/usr/bin/agy"),
+            patch("models.subprocess.run", return_value=fake),
+        ):
+            text, _, _ = models.call_antigravity_model("sys", "user", "antigravity")
+        assert text == "plain text answer"
+
+    def test_bedrock_fable_5_mapping(self):
+        assert (
+            providers.resolve_bedrock_model("claude-fable-5")
+            == "anthropic.claude-fable-5"
+        )
 
     def test_validate_credentials_antigravity(self):
         with patch("providers.ANTIGRAVITY_AVAILABLE", True):

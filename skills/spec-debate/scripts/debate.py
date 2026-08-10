@@ -6,7 +6,7 @@ Sends specs to multiple LLMs for critique using LiteLLM.
 Usage:
     echo "spec" | python3 debate.py critique --models gpt-5.5
     echo "spec" | python3 debate.py critique --models gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.3 --doc-type prd
-    echo "spec" | python3 debate.py critique --models codex/gpt-5.3-codex,gemini/gemini-3.1-pro-preview --doc-type tech
+    echo "spec" | python3 debate.py critique --models codex/gpt-5.6-sol,gemini/gemini-3.1-pro-preview --doc-type tech
     echo "spec" | python3 debate.py critique --models gpt-5.5 --focus security
     echo "spec" | python3 debate.py critique --models gpt-5.5 --persona "security engineer"
     echo "spec" | python3 debate.py critique --models gpt-5.5 --context ./api.md --context ./schema.sql
@@ -22,19 +22,24 @@ Usage:
 
 Supported providers (set corresponding API key):
     OpenAI:     OPENAI_API_KEY       models: gpt-5.5, gpt-5.5-pro, gpt-5.4-mini, o3-pro, o4-mini, etc.
-    Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5, etc.
+    Anthropic:  ANTHROPIC_API_KEY    models: claude-fable-5, claude-opus-5, claude-sonnet-5, claude-haiku-4-5, etc.
     Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-3.5-flash, gemini/gemini-2.5-pro, etc.
     xAI:        XAI_API_KEY          models: xai/grok-4.3, xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning, etc.
     Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-7, foundry/grok-4, foundry/Phi-4-reasoning, etc.
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
     Groq:       GROQ_API_KEY         models: groq/llama-3.3-70b, etc.
     OpenRouter: OPENROUTER_API_KEY   models: openrouter/openai/gpt-5.5-pro, openrouter/anthropic/claude-opus-4.7, etc.
-    Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, deepseek/deepseek-chat, etc.
+    Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, etc.
     ZAI (GLM):  ZAI_API_KEY          models: zai/glm-5.1, zai/glm-5-turbo, zai/glm-5, etc.
     Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.6, moonshot/kimi-k2.5, etc.
-    Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.5, codex/gpt-5.3-codex
+    Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.6-sol, codex/gpt-5.6-terra, codex/gpt-5.5
                 Install: npm install -g @openai/codex && codex login
                 Reasoning: --codex-reasoning xhigh (minimal, low, medium, high, xhigh)
+                Note: ChatGPT-account auth serves only the ChatGPT lineup; other
+                models (gpt-5.3-codex, gpt-5.5-pro) need API-key auth
+    Antigravity: (Google account)      models: antigravity/gemini-3.6-flash-high, antigravity/gemini-3.1-pro-high
+                Install: curl -fsSL https://antigravity.google/cli/install.sh | bash
+                Auth: run `agy` once interactively; `agy models` lists slugs
 
     Run 'python3 debate.py discover-models' to query APIs for the latest available models.
     Run 'python3 debate.py foundry-regions <model>' to find Azure regions where a Foundry
@@ -1389,6 +1394,18 @@ def validate_models_before_run(models: list[str], bedrock_mode: bool) -> None:
             elif model.startswith("codex/"):
                 print(
                     f"  - {model} (requires Codex CLI: npm install -g @openai/codex && codex login)",
+                    file=sys.stderr,
+                )
+            elif model == "antigravity" or model.startswith("antigravity/"):
+                print(
+                    f"  - {model} (requires Antigravity CLI: "
+                    "curl -fsSL https://antigravity.google/cli/install.sh | bash, "
+                    "then run `agy` once to sign in)",
+                    file=sys.stderr,
+                )
+            elif model.startswith("gemini-cli/"):
+                print(
+                    f"  - {model} (Gemini CLI retired 2026-06-18 — use antigravity/ or gemini/)",
                     file=sys.stderr,
                 )
             else:

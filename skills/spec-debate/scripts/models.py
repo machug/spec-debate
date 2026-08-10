@@ -62,6 +62,12 @@ NON_RETRYABLE_PATTERNS = (
     "invalid api key",
     "incorrect api key",
     "notfounderror",
+    # Antigravity CLI deterministic failures
+    "is not authenticated",
+    "invalid model selection",
+    # Bedrock messages rewritten in the litellm retry loop below
+    "model not enabled in your bedrock account",
+    "invalid bedrock model id",
 )
 
 CODEX_CHATGPT_HINT = (
@@ -740,8 +746,12 @@ USER REQUEST:
 
     stdout = result.stdout.strip()
 
-    if "Waiting for authentication" in result.stdout or (
-        "oauth" in result.stdout.lower() and "accounts.google.com" in result.stdout
+    # agy prints an interactive OAuth prompt when credentials are missing —
+    # detect its fixed prompt strings, not URL fragments (which could appear
+    # in legitimate model output).
+    if (
+        "Waiting for authentication" in result.stdout
+        or "paste the authorization code" in result.stdout
     ):
         raise RuntimeError(
             "Antigravity CLI is not authenticated. Run `agy` interactively once "
@@ -783,12 +793,15 @@ USER REQUEST:
             input_tokens = int(usage.get("input_tokens", 0) or 0)
             output_tokens = int(usage.get("output_tokens", 0) or 0)
 
-    if not response_text:
-        # Fall back to raw stdout (e.g. --output-format ignored by older agy)
+    if not response_text and payload is None:
+        # Fall back to raw stdout only when it wasn't JSON at all
+        # (e.g. --output-format ignored by an older agy)
         response_text = stdout
 
     if not response_text:
-        raise RuntimeError("No response from Antigravity CLI")
+        raise RuntimeError(
+            "No response text in Antigravity CLI output: " + stdout[:200]
+        )
 
     if not input_tokens:
         input_tokens = len(full_prompt) // 4

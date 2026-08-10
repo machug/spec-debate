@@ -122,6 +122,9 @@ def warn_codex_chatgpt_model_support(models: list[str]) -> None:
 # Bedrock model mapping: friendly names -> Bedrock model IDs
 BEDROCK_MODEL_MAP = {
     # Anthropic Claude models (current generation)
+    # Note: claude-fable-5 requires opting into data sharing via Bedrock's
+    # Data Retention API (provider_data_share) before invocation succeeds.
+    "claude-fable-5": "anthropic.claude-fable-5",
     "claude-opus-5": "anthropic.claude-opus-5",
     "claude-sonnet-5": "anthropic.claude-sonnet-5",
     "claude-opus-4.7": "anthropic.claude-opus-4-7-20260416-v1:0",
