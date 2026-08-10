@@ -82,23 +82,24 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 | Provider | Env Var | Example Models |
 |----------|---------|----------------|
 | OpenAI | `OPENAI_API_KEY` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro` |
-| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-fable-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5` |
 | Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.6-flash`, `gemini/gemini-3.5-flash` |
 | xAI | `XAI_API_KEY` | `xai/grok-4.5`, `xai/grok-4.3`, `xai/grok-4.20-0309-reasoning` |
 | Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.5-pro` |
 | Mistral | `MISTRAL_API_KEY` | `mistral/mistral-large`, `mistral/codestral` |
 | Groq | `GROQ_API_KEY` | `groq/llama-3.3-70b-versatile` |
-| Deepseek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
+| Deepseek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash` |
 | ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5.2`, `zai/glm-5.1`, `zai/glm-5-turbo` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
 | MiniMax | `MINIMAX_API_KEY` | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
-| Codex CLI | ChatGPT subscription | `codex/gpt-5.5`, `codex/gpt-5.3-codex` |
-| Gemini CLI | Google account | `gemini-cli/gemini-3.1-pro-preview` |
+| Codex CLI | ChatGPT subscription | `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.5` (ChatGPT-account auth serves only the ChatGPT lineup) |
+| Antigravity CLI | Google account | `antigravity/gemini-3.6-flash-high`, `antigravity/gemini-3.1-pro-high` (`agy models` lists all) |
+| Gemini CLI | RETIRED 2026-06-18 | Consumer service ended — use `antigravity/` or `gemini/` instead |
 
 Run `python3 debate.py discover-models` to query provider APIs for the latest available models.
 
-**No API key?** Install [Codex CLI](https://github.com/openai/codex) (`npm install -g @openai/codex`) or [Gemini CLI](https://github.com/google-gemini/gemini-cli) (`npm install -g @google/gemini-cli`) to use your existing ChatGPT or Google subscription.
+**No API key?** Install [Codex CLI](https://github.com/openai/codex) (`npm install -g @openai/codex`) or [Antigravity CLI](https://antigravity.google) (`curl -fsSL https://antigravity.google/cli/install.sh | bash`, then run `agy` once to sign in) to use your existing ChatGPT or Google subscription. Note: ChatGPT-account Codex serves only the current ChatGPT lineup (`gpt-5.6-sol`/`terra`/`luna`, `gpt-5.5`); other models need API-key auth.
 
 **Model costs** are discovered dynamically from [LiteLLM's model registry](https://github.com/BerriAI/litellm) — no hardcoded pricing to go stale.
 
@@ -316,7 +317,7 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 | `--persona` | Professional persona for critique |
 | `--context, -c` | Context file (repeatable) |
 | `--preserve-intent` | Require justification for removals |
-| `--review-only` | Judge mode: emit `[AGREE]` or short critique, never re-emit spec (for `gpt-5.5-pro`/`claude-opus-4-7` as a final acceptance gate) |
+| `--review-only` | Judge mode: emit `[AGREE]` or short critique, never re-emit spec (for `gpt-5.5-pro`/`claude-opus-5` as a final acceptance gate) |
 | `--session, -s` | Session ID for persistence |
 | `--resume` | Resume a previous session |
 | `--profile` | Load saved profile |

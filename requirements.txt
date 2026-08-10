@@ -1,2 +1,2 @@
-litellm>=1.83.0
+litellm>=1.96.0
 azure-ai-inference>=1.0.0b9
