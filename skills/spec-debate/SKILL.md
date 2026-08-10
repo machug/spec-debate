@@ -32,7 +32,7 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
           ║                                                  ║
           ║  Skill.......: spec-debate                       ║
           ║  Author......: machug          (hughtec.com)     ║
-          ║  Version.....: 1.6.0                             ║
+          ║  Version.....: 1.10.0                            ║
           ║  Origin......: fork of zscole/adversarial-spec   ║
           ║  Released....: 2026                              ║
           ║  License.....: MIT                               ║
@@ -59,28 +59,29 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 ## Requirements
 
 - Python 3.10+ with `litellm` package installed
-- API key for at least one provider (set via environment variable), OR AWS Bedrock configured, OR CLI tools (codex, gemini) installed
+- API key for at least one provider (set via environment variable), OR AWS Bedrock configured, OR CLI tools (codex, agy) installed
 
-**IMPORTANT: Do NOT install the `llm` package (Simon Willison's tool).** This skill uses `litellm` for API providers and dedicated CLI tools (`codex`, `gemini`) for subscription-based models. Installing `llm` is unnecessary and may cause confusion.
+**IMPORTANT: Do NOT install the `llm` package (Simon Willison's tool).** This skill uses `litellm` for API providers and dedicated CLI tools (`codex`, `agy`) for subscription-based models. Installing `llm` is unnecessary and may cause confusion.
 
 ## Supported Providers
 
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
 | OpenAI     | `OPENAI_API_KEY`       | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro` |
-| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5` |
+| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-fable-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5` |
 | Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.6-flash`, `gemini/gemini-3.5-flash` |
 | xAI        | `XAI_API_KEY`          | `xai/grok-4.5`, `xai/grok-4.3`, `xai/grok-4.20-0309-reasoning` |
 | Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
-| OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.5-pro`, `openrouter/anthropic/claude-opus-4.7` |
-| Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash`, `deepseek/deepseek-chat` |
+| OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.5-pro`, `openrouter/anthropic/claude-opus-5` |
+| Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash` |
 | ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.2`, `zai/glm-5.1`, `zai/glm-5-turbo` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
 | MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
-| Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.5`, `codex/gpt-5.3-codex` (gpt-5.5-pro requires `OPENAI_API_KEY`, not ChatGPT sub; gpt-5.5 unified the Codex line — no separate gpt-5.5-codex) |
-| Gemini CLI | (Google account)       | `gemini-cli/gemini-3.1-pro-preview`, `gemini-cli/gemini-3-flash-preview` |
+| Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.6-luna`, `codex/gpt-5.5` — ChatGPT-account auth serves ONLY these (plus `gpt-5.3-codex-spark` on Pro; `gpt-5.4`/`-mini` retire 2026-08-31). `gpt-5.3-codex` and `gpt-5.5-pro` need API-key auth or the `OPENAI_API_KEY` route |
+| Antigravity CLI | (Google account)  | `antigravity/gemini-3.6-flash-high`, `antigravity/gemini-3.1-pro-high`, `antigravity/claude-sonnet-4-6`, `antigravity/gpt-oss-120b-medium` — slugs from `agy models` |
+| Gemini CLI | (RETIRED 2026-06-18)   | Consumer service ended; enterprise licenses only. Use `antigravity/` or `gemini/` (API key) instead |
 
 **Discover latest models:** Run `cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py discover-models` to query provider APIs for currently available models.
 
@@ -89,18 +90,24 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 - Optional: `AZURE_AI_REGION` (e.g. `eastus2`, `swedencentral`) — required for region-scoped catalog discovery; auto-derived from `AZURE_AI_API_BASE` when the host follows the `<region>.api.cognitive.microsoft.com` pattern
 - Models use `foundry/` prefix: `foundry/claude-opus-4-7`, `foundry/gpt-5.5`, `foundry/Phi-4-reasoning`, `foundry/DeepSeek-V4-Flash`
 - Supports Claude, Grok, Llama, Phi, DeepSeek, Mistral, Kimi, and more via the Foundry model catalog
-- **Model availability is region-specific.** Frontier models like `claude-opus-4-7` and `gpt-5.5` are not deployable in every region (e.g. `westeurope` lacks both as of April 2026). Run `python3 debate.py discover-models` (with region resolved) to list models for your region, or `python3 debate.py foundry-regions <model>` to find regions where a specific model is deployable. Requires the `az` CLI authenticated to your subscription.
-- **Anthropic Claude models require Enterprise or MCA-E subscriptions.** CSP (`CSP_2015-05-01`) and Pay-As-You-Go subscriptions cannot deploy `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5`, or other Claude models on Foundry — the catalog query will list them but the Foundry portal shows "No available regions" at deploy time. Check your subscription's `quotaId` with `az account show --query subscriptionPolicies.quotaId`. Non-Anthropic frontier models (`gpt-5.5`, `DeepSeek-V4-*`, `Kimi-K2.6`, `grok-*`, `Llama-*`, `Phi-*`) have no such restriction and deploy on any subscription type.
+- **Model availability is region-specific.** Frontier models like `claude-opus-5` and `gpt-5.5` are not deployable in every region (e.g. `westeurope` lacks both as of April 2026). Run `python3 debate.py discover-models` (with region resolved) to list models for your region, or `python3 debate.py foundry-regions <model>` to find regions where a specific model is deployable. Requires the `az` CLI authenticated to your subscription.
+- **Anthropic Claude models require Enterprise or MCA-E subscriptions.** CSP (`CSP_2015-05-01`) and Pay-As-You-Go subscriptions cannot deploy `claude-opus-5`, `claude-sonnet-4-6`, `claude-haiku-4-5`, or other Claude models on Foundry — the catalog query will list them but the Foundry portal shows "No available regions" at deploy time. Check your subscription's `quotaId` with `az account show --query subscriptionPolicies.quotaId`. Non-Anthropic frontier models (`gpt-5.5`, `DeepSeek-V4-*`, `Kimi-K2.6`, `grok-*`, `Llama-*`, `Phi-*`) have no such restriction and deploy on any subscription type.
 
 **Codex CLI Setup:**
 - Install: `npm install -g @openai/codex && codex login`
 - Reasoning effort: `--codex-reasoning` (minimal, low, medium, high, xhigh)
 - Web search: `--codex-search` (enables web search for current information)
+- **Auth mode matters:** `codex login` with a ChatGPT account serves only the ChatGPT lineup (`gpt-5.6-sol`/`terra`/`luna`, `gpt-5.5`); other models 400 with "not supported when using Codex with a ChatGPT account". The debate script warns upfront and fails fast (no retries) on this error. API-key auth lifts the restriction.
 
-**Gemini CLI Setup:**
-- Install: `npm install -g @google/gemini-cli && gemini auth`
-- Models: `gemini-3.1-pro-preview`, `gemini-3-flash-preview`
-- No API key needed - uses Google account authentication
+**Antigravity CLI Setup (replaces Gemini CLI):**
+- Install: `curl -fsSL https://antigravity.google/cli/install.sh | bash`
+- Auth: run `agy` once interactively (Google sign-in); headless mode then reuses cached credentials
+- Models: run `agy models` for current slugs (e.g. `gemini-3.6-flash-high`, `gemini-3.1-pro-high`, `claude-sonnet-4-6`, `gpt-oss-120b-medium`) — use as `antigravity/<slug>`; bare `antigravity` uses the default model
+- No API key needed — uses Google account authentication
+
+**Gemini CLI (retired):**
+- Google retired Gemini CLI for consumer accounts on 2026-06-18 in favor of Antigravity CLI; only enterprise licenses with paid API keys still work
+- `gemini-cli/` models remain callable for enterprise users but print a deprecation warning — prefer `antigravity/` (subscription) or `gemini/` (API key)
 
 Run `cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py providers` to see which keys are set.
 
@@ -384,11 +391,12 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `gpt-5.5-pro` - Stronger reasoning, slower (API-only; ChatGPT subscription blocks it)
 - `gpt-5.4-mini` - Lightweight, cost-effective
 
-**If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-5.5`, `codex/gpt-5.3-codex`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
+**If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-5.6-sol`, `codex/gpt-5.5`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro` and `gpt-5.3-codex`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
 
 **If ANTHROPIC_API_KEY is set, include:**
-- `claude-opus-4-7` - Claude Opus 4.7, highest capability (April 2026)
-- `claude-sonnet-4-6` - Claude Sonnet 4.6, excellent reasoning
+- `claude-fable-5` - Claude Fable 5, frontier flagship (June 2026, $10/$50 per 1M)
+- `claude-opus-5` - Claude Opus 5, near-frontier at half the price (July 2026, $5/$25 per 1M)
+- `claude-sonnet-5` - Claude Sonnet 5, workhorse (June 2026, $2/$10 per 1M until Sep 2026)
 - `claude-haiku-4-5` - Claude Haiku 4.5, fast and cheap
 
 **If GEMINI_API_KEY is set, include:**
@@ -416,7 +424,7 @@ Then present available models to the user using AskUserQuestion with multiSelect
 **If DEEPSEEK_API_KEY is set, include:**
 - `deepseek/deepseek-v4-pro` - Latest flagship (1.6T MoE, 1M context)
 - `deepseek/deepseek-v4-flash` - Fast/cheap variant (284B MoE)
-- `deepseek/deepseek-chat` - Legacy alias, cost-effective
+- Note: the legacy `deepseek-chat` alias was removed from the API — use `deepseek-v4-pro`
 
 **If ZAI_API_KEY is set, include:**
 - `zai/glm-5.2` - Latest GLM (July 2026)
@@ -433,14 +441,21 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `minimax/MiniMax-M2.7` - Prior generation
 - Note: routed via litellm to the international endpoint (`api.minimax.io`). For the China endpoint set `MINIMAX_API_BASE=https://api.minimaxi.com/v1`.
 
-**If Codex CLI is installed, include:**
-- `codex/gpt-5.5` - GPT-5.5 via Codex CLI (works on ChatGPT subscription; unified Codex+GPT)
-- `codex/gpt-5.3-codex` - Prior Codex with extended reasoning (works on ChatGPT subscription)
-- Note: `gpt-5.5-pro` is rejected by Codex CLI on ChatGPT subscriptions ("model is not supported when using Codex with a ChatGPT account"). Use the API route via `OPENAI_API_KEY` to reach it. A standalone `gpt-5.5-codex` does not exist — GPT-5.5 absorbed the Codex line.
+**If Codex CLI is installed, include (ChatGPT-account auth):**
+- `codex/gpt-5.6-sol` - GPT-5.6 Sol flagship via Codex CLI
+- `codex/gpt-5.6-terra` - GPT-5.6 Terra, balanced
+- `codex/gpt-5.6-luna` - GPT-5.6 Luna, fast
+- `codex/gpt-5.5` - Prior frontier, still served
+- Note: ChatGPT-account auth serves ONLY the models above (plus `gpt-5.3-codex-spark` on ChatGPT Pro; `gpt-5.4`/`-mini` retire 2026-08-31). Anything else — `gpt-5.3-codex`, `gpt-5.5-pro` — 400s with "not supported when using Codex with a ChatGPT account"; the script fails fast and prints a hint. Codex API-key auth lifts the restriction.
 
-**If Gemini CLI is installed, include:**
-- `gemini-cli/gemini-3.1-pro-preview` - Google Gemini 3.1 Pro
-- `gemini-cli/gemini-3-flash-preview` - Google Gemini 3 Flash
+**If Antigravity CLI (`agy`) is installed, include:**
+- `antigravity/gemini-3.6-flash-high` - Gemini 3.6 Flash, high effort
+- `antigravity/gemini-3.1-pro-high` - Gemini 3.1 Pro, high effort
+- `antigravity/claude-sonnet-4-6` - Claude Sonnet 4.6 via Antigravity
+- `antigravity/gpt-oss-120b-medium` - GPT-OSS 120B via Antigravity
+- Run `agy models` for the live slug list; requires one-time interactive `agy` Google sign-in
+
+**Gemini CLI (retired 2026-06-18):** do not recommend `gemini-cli/` models — consumer service ended. Use `antigravity/` or `gemini/` (API key) instead.
 
 Use AskUserQuestion like this:
 ```
@@ -644,7 +659,7 @@ After the user review period, or if explicitly requested:
    ```
 
 **Use cases for additional cycles:**
-- First cycle with faster/cheaper models (gpt-5-mini), then a **final acceptance gate** with deep reasoners in judge mode: `--models gpt-5.5-pro,claude-opus-4-7 --review-only` (they emit `[AGREE]` or a short critique without re-emitting the spec — see "Final Reviewer / Judge Mode")
+- First cycle with faster/cheaper models (gpt-5-mini), then a **final acceptance gate** with deep reasoners in judge mode: `--models gpt-5.5-pro,claude-opus-5 --review-only` (they emit `[AGREE]` or a short critique without re-emitting the spec — see "Final Reviewer / Judge Mode")
 - First cycle for structure and completeness, second cycle for security or performance focus
 - Fresh perspective after user-requested changes
 
@@ -700,12 +715,12 @@ After Step 6 (user accepted the spec) — or after Step 8 converted a PRD into a
      --pr-label PR-1 \
      --pr-scope "data engine + schemas" \
      --title-hint "NSW jurisdiction compat" \
-     --models claude-opus-4-7
+     --models claude-opus-5
    ```
 
    Default output path: sibling of `--spec` with `-<pr-label>.plan.md` appended to the spec's stem (stripping `.spec-debate-final` / `.spec` suffixes if present). Override with `--plan-out <path>`.
 
-5. **Use a strong reasoning model.** This is a one-shot generation of a 400–1500 line structured document — cheap but quality-sensitive. Recommend `claude-opus-4-7`, `gpt-5.5-pro`, or `gemini-3.1-pro-preview`. Avoid fast/flash models for plan emission.
+5. **Use a strong reasoning model.** This is a one-shot generation of a 400–1500 line structured document — cheap but quality-sensitive. Recommend `claude-opus-5`, `gpt-5.5-pro`, or `gemini-3.1-pro-preview`. Avoid fast/flash models for plan emission.
 
 6. **Report to user:** paths written + total cost across all plan calls. Do not run another debate round on the plans — they're derivative; if the user wants adversarial plan review, that's a separate `/spec-debate` session with the plan as input.
 
@@ -924,7 +939,7 @@ Can be combined with other flags: `--preserve-intent --focus security`
 
 ### Final Reviewer / Judge Mode (`--review-only`)
 
-Deep reasoners (`gpt-5.5-pro`) and `claude-opus-4-7` share one token budget for
+Deep reasoners (`gpt-5.5-pro`) and `claude-opus-5` share one token budget for
 hidden reasoning **and** visible output. In the normal loop every model must
 re-emit the *entire* spec inside `[SPEC]` tags each round — for a long spec a
 deep reasoner spends its budget on reasoning, then runs out before it can re-type
@@ -942,7 +957,7 @@ python3 debate.py critique --models gpt-5.5,gemini/gemini-3.1-pro-preview --doc-
 SPEC_EOF
 
 # Then a final acceptance gate with deep reasoners — no re-emit, no cap:
-python3 debate.py critique --models gpt-5.5-pro,claude-opus-4-7 --review-only --doc-type tech <<'SPEC_EOF'
+python3 debate.py critique --models gpt-5.5-pro,claude-opus-5 --review-only --doc-type tech <<'SPEC_EOF'
 <converged spec here>
 SPEC_EOF
 ```
@@ -957,7 +972,7 @@ controls — for GPT-5 models the skill sets `verbosity=low` and (non-pro)
 its deep reasoning and is used where it shines: judging, not re-typing.
 
 **Use when:**
-- You want `gpt-5.5-pro` and/or `claude-opus-4-7` as a final acceptance gate
+- You want `gpt-5.5-pro` and/or `claude-opus-5` as a final acceptance gate
 - A model keeps failing with `max_output_tokens` on full re-emit
 - You want a cheap convergence loop followed by a high-capability sign-off
 
@@ -1025,14 +1040,14 @@ python3 debate.py emit-plan \
   --spec docs/plans/2026-04-22-feature.spec-debate-final.md \
   --pr-label PR-1 \
   --pr-scope "data engine + schemas" \
-  --models claude-opus-4-7
+  --models claude-opus-5
 
 # Loop over stacked PRs
 for n in 1 2 3 4; do
   python3 debate.py emit-plan \
     --spec docs/plans/2026-04-22-feature.spec-debate-final.md \
     --pr-label "PR-$n" \
-    --models claude-opus-4-7
+    --models claude-opus-5
 done
 ```
 
@@ -1103,7 +1118,7 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 - `--context, -c` - Context file (can be used multiple times)
 - `--profile` - Load settings from saved profile
 - `--preserve-intent` - Require explicit justification for any removal
-- `--review-only` - Judge mode: emit `[AGREE]` or a short critique, never re-emit the spec (for `gpt-5.5-pro`/`claude-opus-4-7` as a final acceptance gate)
+- `--review-only` - Judge mode: emit `[AGREE]` or a short critique, never re-emit the spec (for `gpt-5.5-pro`/`claude-opus-5` as a final acceptance gate)
 - `--session, -s` - Session ID for persistence and checkpointing
 - `--resume` - Resume a previous session by ID
 - `--press, -p` - Anti-laziness check for early agreement
@@ -1118,4 +1133,4 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 - `--pr-scope <text>` - One-line description of what this PR covers. Optional; auto-inferred from spec if omitted.
 - `--title-hint <text>` - Feature/project name used in the plan title (default: derived from spec filename).
 - `--plan-out <path>` - Output path. Default: sibling of `--spec` with `-<pr-label>.plan.md` suffix.
-- `--models <model>` - Model used for generation (first in list). Recommend a strong reasoning model (claude-opus-4-7, gpt-5.5-pro, gemini-3.1-pro-preview).
+- `--models <model>` - Model used for generation (first in list). Recommend a strong reasoning model (claude-opus-5, gpt-5.5-pro, gemini-3.1-pro-preview).

@@ -37,6 +37,8 @@ from prompts import (
     get_system_prompt,
 )
 from providers import (
+    ANTIGRAVITY_AVAILABLE,
+    ANTIGRAVITY_PATH,
     CODEX_AVAILABLE,
     CODEX_PATH,
     DEFAULT_CODEX_REASONING,
@@ -47,6 +49,34 @@ from providers import (
 
 MAX_RETRIES = 3
 RETRY_BASE_DELAY = 1.0  # seconds
+
+# Error substrings that retrying cannot fix: bad model id, wrong auth mode,
+# rejected/revoked credentials. These are deterministic 4xx-class failures —
+# retrying just burns time and spams warnings.
+NON_RETRYABLE_PATTERNS = (
+    "not supported when using codex with a chatgpt account",
+    "invalid_request_error",
+    "model_not_found",
+    "does not exist or you do not have access",
+    "authenticationerror",
+    "invalid api key",
+    "incorrect api key",
+    "notfounderror",
+)
+
+CODEX_CHATGPT_HINT = (
+    "Codex is authenticated with a ChatGPT account, which only serves: "
+    "gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5 "
+    "(gpt-5.4/-mini retire 2026-08-31; gpt-5.3-codex-spark needs ChatGPT Pro). "
+    "For other models authenticate Codex with an API key or use the "
+    "OPENAI_API_KEY litellm route (e.g. --models gpt-5.5-pro)."
+)
+
+
+def is_non_retryable_error(error_msg: str) -> bool:
+    """Whether an error is deterministic (4xx-class) and not worth retrying."""
+    lower = error_msg.lower()
+    return any(p in lower for p in NON_RETRYABLE_PATTERNS)
 
 
 def is_reasoning_model(model: str) -> bool:
@@ -562,8 +592,17 @@ def call_gemini_cli_model(
     """
     if not GEMINI_CLI_AVAILABLE:
         raise RuntimeError(
-            "Gemini CLI not found. Install with: npm install -g @google/gemini-cli"
+            "Gemini CLI not found. Note: Gemini CLI was retired for consumer "
+            "accounts on 2026-06-18 — use antigravity/<model> (agy CLI) or "
+            "gemini/<model> (GEMINI_API_KEY) instead."
         )
+
+    print(
+        "Warning: Gemini CLI consumer service was retired 2026-06-18 in favor of "
+        "Antigravity CLI. If this call fails, switch to antigravity/<model> "
+        "(agy CLI) or gemini/<model> (GEMINI_API_KEY).",
+        file=sys.stderr,
+    )
 
     # Extract actual model name from "gemini-cli/model" format
     actual_model = model.split("/", 1)[1] if "/" in model else model
@@ -620,6 +659,210 @@ USER REQUEST:
         raise RuntimeError(f"Gemini CLI timed out after {timeout}s")
     except FileNotFoundError:
         raise RuntimeError("Gemini CLI not found in PATH")
+
+
+def resolve_antigravity_model(model: str) -> Optional[str]:
+    """Extract the agy model slug from an antigravity/<slug> model string.
+
+    `agy --model` accepts slugs exactly as listed by `agy models`
+    (e.g. gemini-3.1-pro-high, claude-sonnet-4-6, gpt-oss-120b-medium).
+    Returns None for a bare "antigravity" (use agy's default model).
+    """
+    slug = model.split("/", 1)[1] if "/" in model else ""
+    return slug or None
+
+
+def call_antigravity_model(
+    system_prompt: str,
+    user_message: str,
+    model: str,
+    timeout: int = 600,
+) -> tuple[str, int, int]:
+    """
+    Call Antigravity CLI (agy) in headless print mode using Google account auth.
+
+    Sign in once interactively (`agy`) before headless use — print mode reuses
+    cached credentials and cannot complete the OAuth flow itself.
+
+    Args:
+        system_prompt: System instructions for the model
+        user_message: User prompt to send
+        model: Model name (e.g., "antigravity/gemini-3.5-flash"; bare
+            "antigravity" uses agy's default model)
+        timeout: Timeout in seconds (default 10 minutes)
+
+    Returns:
+        Tuple of (response_text, input_tokens, output_tokens)
+        Token counts come from agy JSON metadata when present, else estimated.
+
+    Raises:
+        RuntimeError: If Antigravity CLI is not available or fails
+    """
+    if not ANTIGRAVITY_AVAILABLE:
+        raise RuntimeError(
+            "Antigravity CLI not found. Install with: "
+            "curl -fsSL https://antigravity.google/cli/install.sh | bash "
+            "— then run `agy` once to sign in."
+        )
+
+    display_model = resolve_antigravity_model(model)
+
+    full_prompt = f"""SYSTEM INSTRUCTIONS:
+{system_prompt}
+
+USER REQUEST:
+{user_message}"""
+
+    cmd = [
+        ANTIGRAVITY_PATH,
+        "-p",
+        full_prompt,
+        "--output-format",
+        "json",
+        "--print-timeout",
+        f"{timeout}s",
+    ]
+    if display_model:
+        cmd.extend(["--model", display_model])
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout + 30,
+            stdin=subprocess.DEVNULL,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"Antigravity CLI timed out after {timeout}s")
+    except FileNotFoundError:
+        raise RuntimeError("Antigravity CLI not found in PATH")
+
+    stdout = result.stdout.strip()
+
+    if "Waiting for authentication" in result.stdout or (
+        "oauth" in result.stdout.lower() and "accounts.google.com" in result.stdout
+    ):
+        raise RuntimeError(
+            "Antigravity CLI is not authenticated. Run `agy` interactively once "
+            "to complete Google sign-in, then retry."
+        )
+
+    if result.returncode != 0:
+        error_msg = (
+            result.stderr.strip()
+            or stdout
+            or f"Antigravity CLI exited with code {result.returncode}"
+        )
+        raise RuntimeError(f"Antigravity CLI failed: {error_msg}")
+
+    response_text = ""
+    input_tokens = 0
+    output_tokens = 0
+
+    # JSON output is a single object; schema may evolve, so probe common keys.
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        payload = None
+
+    if isinstance(payload, dict):
+        status = payload.get("status", "")
+        if status and status != "SUCCESS":
+            raise RuntimeError(
+                f"Antigravity CLI returned status {status}: "
+                f"{payload.get('error') or payload.get('response') or stdout[:200]}"
+            )
+        for key in ("response", "result", "text", "output", "message"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                response_text = value.strip()
+                break
+        usage = payload.get("usage") or payload.get("metadata") or {}
+        if isinstance(usage, dict):
+            input_tokens = int(usage.get("input_tokens", 0) or 0)
+            output_tokens = int(usage.get("output_tokens", 0) or 0)
+
+    if not response_text:
+        # Fall back to raw stdout (e.g. --output-format ignored by older agy)
+        response_text = stdout
+
+    if not response_text:
+        raise RuntimeError("No response from Antigravity CLI")
+
+    if not input_tokens:
+        input_tokens = len(full_prompt) // 4
+    if not output_tokens:
+        output_tokens = len(response_text) // 4
+
+    return response_text, input_tokens, output_tokens
+
+
+def _call_cli_provider_with_retries(
+    model: str,
+    call_fn,
+    review_only: bool,
+) -> ModelResponse:
+    """Shared retry loop for CLI/SDK providers (codex, gemini-cli, antigravity,
+    foundry).
+
+    Retries transient failures with exponential backoff; deterministic errors
+    (unknown model, wrong auth mode, bad credentials) fail fast. Codex
+    ChatGPT-account model rejections get an actionable hint appended.
+    """
+    last_error = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            content, input_tokens, output_tokens = call_fn()
+            agreed = "[AGREE]" in content
+            extracted = extract_spec(content)
+
+            if should_warn_missing_spec(agreed, extracted, review_only):
+                print(
+                    f"Warning: {model} provided critique but no [SPEC] tags found. Response may be malformed.",
+                    file=sys.stderr,
+                )
+
+            cost = cost_tracker.add(model, input_tokens, output_tokens)
+
+            return ModelResponse(
+                model=model,
+                response=content,
+                agreed=agreed,
+                spec=extracted,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cost=cost,
+            )
+        except Exception as e:
+            last_error = str(e)
+            lower = last_error.lower()
+            if (
+                "not supported when using codex with a chatgpt account" in lower
+            ):
+                last_error = f"{last_error}\n  Hint: {CODEX_CHATGPT_HINT}"
+            if is_non_retryable_error(last_error):
+                print(
+                    f"Error: {model} failed (non-retryable): {last_error}",
+                    file=sys.stderr,
+                )
+                break
+            if attempt < MAX_RETRIES - 1:
+                delay = RETRY_BASE_DELAY * (2**attempt)
+                print(
+                    f"Warning: {model} failed (attempt {attempt + 1}/{MAX_RETRIES}): {last_error}. Retrying in {delay:.1f}s...",
+                    file=sys.stderr,
+                )
+                time.sleep(delay)
+            else:
+                print(
+                    f"Error: {model} failed after {MAX_RETRIES} attempts: {last_error}",
+                    file=sys.stderr,
+                )
+
+    return ModelResponse(
+        model=model, response="", agreed=False, spec=None, error=last_error
+    )
 
 
 def call_single_model(
@@ -679,154 +922,57 @@ def call_single_model(
 
     # Route Codex CLI models to dedicated handler
     if model.startswith("codex/"):
-        last_error = None
-        for attempt in range(MAX_RETRIES):
-            try:
-                content, input_tokens, output_tokens = call_codex_model(
-                    system_prompt=system_prompt,
-                    user_message=user_message,
-                    model=model,
-                    reasoning_effort=codex_reasoning,
-                    timeout=timeout,
-                    search=codex_search,
-                )
-                agreed = "[AGREE]" in content
-                extracted = extract_spec(content)
-
-                if should_warn_missing_spec(agreed, extracted, review_only):
-                    print(
-                        f"Warning: {model} provided critique but no [SPEC] tags found. Response may be malformed.",
-                        file=sys.stderr,
-                    )
-
-                cost = cost_tracker.add(model, input_tokens, output_tokens)
-
-                return ModelResponse(
-                    model=model,
-                    response=content,
-                    agreed=agreed,
-                    spec=extracted,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                    cost=cost,
-                )
-            except Exception as e:
-                last_error = str(e)
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_BASE_DELAY * (2**attempt)
-                    print(
-                        f"Warning: {model} failed (attempt {attempt + 1}/{MAX_RETRIES}): {last_error}. Retrying in {delay:.1f}s...",
-                        file=sys.stderr,
-                    )
-                    time.sleep(delay)
-                else:
-                    print(
-                        f"Error: {model} failed after {MAX_RETRIES} attempts: {last_error}",
-                        file=sys.stderr,
-                    )
-
-        return ModelResponse(
-            model=model, response="", agreed=False, spec=None, error=last_error
+        return _call_cli_provider_with_retries(
+            model,
+            lambda: call_codex_model(
+                system_prompt=system_prompt,
+                user_message=user_message,
+                model=model,
+                reasoning_effort=codex_reasoning,
+                timeout=timeout,
+                search=codex_search,
+            ),
+            review_only,
         )
 
-    # Route Gemini CLI models to dedicated handler
+    # Route Antigravity CLI models to dedicated handler
+    if model == "antigravity" or model.startswith("antigravity/"):
+        return _call_cli_provider_with_retries(
+            model,
+            lambda: call_antigravity_model(
+                system_prompt=system_prompt,
+                user_message=user_message,
+                model=model,
+                timeout=timeout,
+            ),
+            review_only,
+        )
+
+    # Route Gemini CLI models to dedicated handler (retired 2026-06-18;
+    # kept for enterprise-license users, warns and points at antigravity/)
     if model.startswith("gemini-cli/"):
-        last_error = None
-        for attempt in range(MAX_RETRIES):
-            try:
-                content, input_tokens, output_tokens = call_gemini_cli_model(
-                    system_prompt=system_prompt,
-                    user_message=user_message,
-                    model=model,
-                    timeout=timeout,
-                )
-                agreed = "[AGREE]" in content
-                extracted = extract_spec(content)
-
-                if should_warn_missing_spec(agreed, extracted, review_only):
-                    print(
-                        f"Warning: {model} provided critique but no [SPEC] tags found. Response may be malformed.",
-                        file=sys.stderr,
-                    )
-
-                cost = cost_tracker.add(model, input_tokens, output_tokens)
-
-                return ModelResponse(
-                    model=model,
-                    response=content,
-                    agreed=agreed,
-                    spec=extracted,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                    cost=cost,
-                )
-            except Exception as e:
-                last_error = str(e)
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_BASE_DELAY * (2**attempt)
-                    print(
-                        f"Warning: {model} failed (attempt {attempt + 1}/{MAX_RETRIES}): {last_error}. Retrying in {delay:.1f}s...",
-                        file=sys.stderr,
-                    )
-                    time.sleep(delay)
-                else:
-                    print(
-                        f"Error: {model} failed after {MAX_RETRIES} attempts: {last_error}",
-                        file=sys.stderr,
-                    )
-
-        return ModelResponse(
-            model=model, response="", agreed=False, spec=None, error=last_error
+        return _call_cli_provider_with_retries(
+            model,
+            lambda: call_gemini_cli_model(
+                system_prompt=system_prompt,
+                user_message=user_message,
+                model=model,
+                timeout=timeout,
+            ),
+            review_only,
         )
 
     # Route Azure AI Foundry models to dedicated handler
     if model.startswith("foundry/"):
-        last_error = None
-        for attempt in range(MAX_RETRIES):
-            try:
-                content, input_tokens, output_tokens = call_foundry_model(
-                    system_prompt=system_prompt,
-                    user_message=user_message,
-                    model=model,
-                    timeout=timeout,
-                )
-                agreed = "[AGREE]" in content
-                extracted = extract_spec(content)
-
-                if should_warn_missing_spec(agreed, extracted, review_only):
-                    print(
-                        f"Warning: {model} provided critique but no [SPEC] tags found. Response may be malformed.",
-                        file=sys.stderr,
-                    )
-
-                cost = cost_tracker.add(model, input_tokens, output_tokens)
-
-                return ModelResponse(
-                    model=model,
-                    response=content,
-                    agreed=agreed,
-                    spec=extracted,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                    cost=cost,
-                )
-            except Exception as e:
-                last_error = str(e)
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_BASE_DELAY * (2**attempt)
-                    print(
-                        f"Warning: {model} failed (attempt {attempt + 1}/{MAX_RETRIES}): {last_error}. Retrying in {delay:.1f}s...",
-                        file=sys.stderr,
-                    )
-                    time.sleep(delay)
-                else:
-                    print(
-                        f"Error: {model} failed after {MAX_RETRIES} attempts: {last_error}",
-                        file=sys.stderr,
-                    )
-
-        return ModelResponse(
-            model=model, response="", agreed=False, spec=None, error=last_error
+        return _call_cli_provider_with_retries(
+            model,
+            lambda: call_foundry_model(
+                system_prompt=system_prompt,
+                user_message=user_message,
+                model=model,
+                timeout=timeout,
+            ),
+            review_only,
         )
 
     # Standard litellm path for all other providers
@@ -897,6 +1043,13 @@ def call_single_model(
                     )
                 elif "ValidationException" in last_error:
                     last_error = f"Invalid Bedrock model ID: {display_model}"
+
+            if is_non_retryable_error(last_error):
+                print(
+                    f"Error: {display_model} failed (non-retryable): {last_error}",
+                    file=sys.stderr,
+                )
+                break
 
             if attempt < MAX_RETRIES - 1:
                 delay = RETRY_BASE_DELAY * (2**attempt)

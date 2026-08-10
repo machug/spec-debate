@@ -106,6 +106,7 @@ from providers import (  # noqa: E402
     save_profile,
     validate_bedrock_models,
     validate_model_credentials,
+    warn_codex_chatgpt_model_support,
     warn_openai_base_url_override,
 )
 from session import SESSIONS_DIR, SessionState, save_checkpoint  # noqa: E402
@@ -509,6 +510,7 @@ def handle_test_command(args: argparse.Namespace) -> bool:
         models = [p[2] for p in available]
 
     warn_openai_base_url_override(models)
+    warn_codex_chatgpt_model_support(models)
 
     print(f"Testing {len(models)} model(s)...\n")
 
@@ -518,11 +520,22 @@ def handle_test_command(args: argparse.Namespace) -> bool:
         start = time.time()
         try:
             if model.startswith("codex/"):
+                # Low reasoning effort: this is a connectivity check, and the
+                # default xhigh routinely blows a smoke-test timeout.
                 response, inp, out = call_codex_model(
                     "You are a test assistant.",
                     "Say hello in one word",
                     model,
-                    timeout=30,
+                    reasoning_effort="low",
+                    timeout=120,
+                )
+            elif model == "antigravity" or model.startswith("antigravity/"):
+                from models import call_antigravity_model
+                response, inp, out = call_antigravity_model(
+                    "You are a test assistant.",
+                    "Say hello in one word",
+                    model,
+                    timeout=60,
                 )
             elif model.startswith("gemini-cli/"):
                 response, inp, out = call_gemini_cli_model(
@@ -1410,6 +1423,7 @@ def main() -> None:
     # Bedrock routes through AWS, so a stray OPENAI_BASE_URL is irrelevant there
     if not bedrock_mode:
         warn_openai_base_url_override(models)
+        warn_codex_chatgpt_model_support(models)
 
     if args.action == "send-final":
         handle_send_final(args, models)
