@@ -41,6 +41,7 @@ from providers import (
     ANTIGRAVITY_PATH,
     CODEX_AVAILABLE,
     CODEX_PATH,
+    DEFAULT_CLAUDE_EFFORT,
     DEFAULT_CODEX_REASONING,
     GEMINI_CLI_AVAILABLE,
     GEMINI_CLI_PATH,
@@ -73,7 +74,7 @@ NON_RETRYABLE_PATTERNS = (
 CODEX_CHATGPT_HINT = (
     "Codex is authenticated with a ChatGPT account, which only serves: "
     "gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5 "
-    "(gpt-5.4/-mini retire 2026-08-31; gpt-5.3-codex-spark needs ChatGPT Pro). "
+    "(gpt-5.3-codex-spark needs ChatGPT Pro; gpt-5.4/-mini retired 2026-08-31). "
     "For other models authenticate Codex with an API key or use the "
     "OPENAI_API_KEY litellm route (e.g. --models gpt-5.5-pro)."
 )
@@ -85,12 +86,38 @@ def is_non_retryable_error(error_msg: str) -> bool:
     return any(p in lower for p in NON_RETRYABLE_PATTERNS)
 
 
+# Anthropic models from this version up reject any temperature but 1
+# (verified 2026-08-31: claude-opus-4-7/-4-8, claude-opus-5, claude-sonnet-5 and
+# claude-fable-5 all raise UnsupportedParamsError on temperature=0; sonnet-4-6,
+# opus-4-6 and haiku-4-5 still accept it).
+CLAUDE_FIXED_TEMPERATURE_FROM = (4, 7)
+
+# Effort (output_config.effort) is supported from Claude 4.6 up; every model
+# that rejects temperature also takes effort. Debaters re-emit the whole spec,
+# so they run at "medium" — Anthropic's documented step-down from the "high"
+# default — instead of burning the full output budget on thinking.
+CLAUDE_EFFORT_FROM = (4, 6)
+
+# Matches "claude-opus-5", "claude-opus-4-8", "claude-sonnet-4-6-20250627-v1:0",
+# "anthropic.claude-opus-4-7-...", "antigravity/claude-sonnet-4-6". Deliberately
+# does NOT match the legacy "claude-3-5-sonnet" ordering, which is pre-4.7.
+_CLAUDE_VERSION_RE = re.compile(r"claude-(?:opus|sonnet|haiku|fable)-(\d+)(?:[-.](\d+))?")
+
+
+def claude_version(model: str) -> Optional[tuple[int, int]]:
+    """Return (major, minor) for a Claude model id, or None if not one."""
+    m = _CLAUDE_VERSION_RE.search(model.lower())
+    if not m:
+        return None
+    return (int(m.group(1)), int(m.group(2) or 0))
+
+
 def is_reasoning_model(model: str) -> bool:
     """
-    Check if a model is a reasoning model (o-series, gpt-5).
+    Check if a model is a reasoning model (o-series, gpt-5, Claude 4.7+).
 
     Reasoning models differ from standard models:
-    - They ignore the temperature parameter (fixed internally)
+    - They ignore or reject the temperature parameter (fixed internally)
     - They use max_completion_tokens instead of max_tokens
 
     Args:
@@ -116,6 +143,10 @@ def is_reasoning_model(model: str) -> bool:
         m = re.search(r"kimi-k(\d+(?:\.\d+)?)", model_lower)
         if m and float(m.group(1)) >= 2.5:
             return True
+    # Anthropic Claude 4.7 and newer only accept temperature=1
+    version = claude_version(model_lower)
+    if version and version >= CLAUDE_FIXED_TEMPERATURE_FROM:
+        return True
     return False
 
 
@@ -127,8 +158,10 @@ def uses_max_completion_tokens(model: str) -> bool:
     """
     if not is_reasoning_model(model):
         return False
-    # xAI and Moonshot use max_tokens even for reasoning models
+    # xAI, Moonshot and Anthropic use max_tokens even for reasoning models
     if model.lower().startswith(("xai/", "moonshot/")):
+        return False
+    if claude_version(model):
         return False
     return True
 
@@ -175,6 +208,31 @@ def gpt5_tuning_params(model: str) -> dict:
     if not is_pro:
         params["reasoning_effort"] = "medium"
     return params
+
+
+def claude_tuning_params(
+    model: str, review_only: bool, effort: str = DEFAULT_CLAUDE_EFFORT
+) -> dict:
+    """Effort control for Claude models, mirroring gpt5_tuning_params.
+
+    Claude 4.6+ defaults to `high` effort (adaptive thinking always on), which
+    on a full spec re-emit burns tens of thousands of tokens and minutes of
+    wall time. See DEFAULT_CLAUDE_EFFORT for the measured trade-off.
+
+    Judges (review_only) never re-emit the spec, so their output is short
+    already — leave them at Anthropic's `high` default, where thoroughness is
+    the point.
+
+    LiteLLM maps `reasoning_effort` to Anthropic's `output_config.effort`.
+    Returns kwargs to merge into the litellm completion call; empty for
+    non-Claude models and for models older than 4.7 (no effort support).
+    """
+    if review_only:
+        return {}
+    version = claude_version(model)
+    if not version or version < CLAUDE_EFFORT_FROM:
+        return {}
+    return {"reasoning_effort": effort}
 
 
 def should_warn_missing_spec(
@@ -540,6 +598,8 @@ USER REQUEST:
                 event = json.loads(line)
             except json.JSONDecodeError:
                 continue
+            if not isinstance(event, dict):
+                continue
 
             event_type = event.get("type")
             if event_type == "item.completed":
@@ -551,7 +611,11 @@ USER REQUEST:
                 input_tokens = usage.get("input_tokens", 0)
                 output_tokens = usage.get("output_tokens", 0)
             elif event_type in ("error", "turn.failed"):
-                msg = event.get("message") or event.get("error", {}).get("message")
+                # The "error" field may be a dict, a bare string, or null.
+                err = event.get("error")
+                msg = event.get("message") or (
+                    err.get("message") if isinstance(err, dict) else err
+                )
                 if msg:
                     structured_error = msg
 
@@ -572,6 +636,10 @@ USER REQUEST:
         raise RuntimeError(f"Codex CLI timed out after {timeout}s")
     except FileNotFoundError:
         raise RuntimeError("Codex CLI not found in PATH")
+
+
+# One-shot flag so the retirement notice doesn't repeat on every call and retry.
+_gemini_retirement_warned = False
 
 
 def call_gemini_cli_model(
@@ -603,12 +671,15 @@ def call_gemini_cli_model(
             "gemini/<model> (GEMINI_API_KEY) instead."
         )
 
-    print(
-        "Warning: Gemini CLI consumer service was retired 2026-06-18 in favor of "
-        "Antigravity CLI. If this call fails, switch to antigravity/<model> "
-        "(agy CLI) or gemini/<model> (GEMINI_API_KEY).",
-        file=sys.stderr,
-    )
+    global _gemini_retirement_warned
+    if not _gemini_retirement_warned:
+        _gemini_retirement_warned = True
+        print(
+            "Warning: Gemini CLI consumer service was retired 2026-06-18 in favor of "
+            "Antigravity CLI. If this call fails, switch to antigravity/<model> "
+            "(agy CLI) or gemini/<model> (GEMINI_API_KEY).",
+            file=sys.stderr,
+        )
 
     # Extract actual model name from "gemini-cli/model" format
     actual_model = model.split("/", 1)[1] if "/" in model else model
@@ -894,6 +965,7 @@ def call_single_model(
     bedrock_mode: bool = False,
     bedrock_region: Optional[str] = None,
     review_only: bool = False,
+    claude_effort: str = DEFAULT_CLAUDE_EFFORT,
 ) -> ModelResponse:
     """Send spec to a single model and return response with retry on failure.
 
@@ -1015,6 +1087,10 @@ def call_single_model(
             # GPT-5 family: cap visible verbosity and (non-pro) reasoning effort
             # so reasoning + output fit the budget. Replaces the old prose hint.
             completion_kwargs.update(gpt5_tuning_params(actual_model))
+            # Claude 4.6+: step effort down for in-loop debaters (same reason).
+            completion_kwargs.update(
+                claude_tuning_params(actual_model, review_only, claude_effort)
+            )
 
             response = completion(**completion_kwargs)
             content = response.choices[0].message.content or ""
@@ -1098,6 +1174,7 @@ def call_models_parallel(
     bedrock_mode: bool = False,
     bedrock_region: Optional[str] = None,
     review_only: bool = False,
+    claude_effort: str = DEFAULT_CLAUDE_EFFORT,
 ) -> list[ModelResponse]:
     """Call multiple models in parallel and collect responses."""
     if not models:
@@ -1122,6 +1199,7 @@ def call_models_parallel(
                 bedrock_mode,
                 bedrock_region,
                 review_only,
+                claude_effort,
             ): model
             for model in models
         }

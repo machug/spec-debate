@@ -16,9 +16,18 @@ venv/
 CLAUDE.md
 AGENTS.md
 
+# CLI provider session artifacts
+.antigravitycli/
+
 # skills.sh local installs
 .agents/
 .crush/
 .goose/
 .junie/
 skills-lock.json
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/

@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "spec_debate",
+  "project_id": "f9667dbe-3858-486a-b07f-858bbea30fe1"
+}

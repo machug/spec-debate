@@ -25,7 +25,7 @@ except ImportError:
 _CLI_COSTS = {
     "codex/": {"input": 0.0, "output": 0.0},
     "gemini-cli/": {"input": 0.0, "output": 0.0},
-    "antigravity": {"input": 0.0, "output": 0.0},
+    "antigravity/": {"input": 0.0, "output": 0.0},
 }
 
 DEFAULT_COST = {"input": 5.00, "output": 15.00}
@@ -36,7 +36,11 @@ def get_model_cost(model: str) -> dict[str, float]:
 
     Falls back to DEFAULT_COST for unknown models.
     """
-    # CLI tools — free (subscription-based)
+    # CLI tools — free (subscription-based). Bare "antigravity" means agy's
+    # default model; a plain prefix match would wrongly catch litellm-routed
+    # IDs like "antigravity-pro".
+    if model == "antigravity":
+        return _CLI_COSTS["antigravity/"]
     for prefix, cost in _CLI_COSTS.items():
         if model.startswith(prefix):
             return cost
@@ -66,16 +70,22 @@ ANTIGRAVITY_AVAILABLE = ANTIGRAVITY_PATH is not None
 # Default reasoning effort for Codex CLI (minimal, low, medium, high, xhigh)
 DEFAULT_CODEX_REASONING = "xhigh"
 
+# Default Anthropic effort (output_config.effort) for in-loop debaters.
+# Anthropic defaults to "high", which on a full spec re-emit costs ~6 minutes
+# and ~26k output tokens for Claude Opus 5. Measured 2026-08-31 on one critique:
+#   high 360s/25.9k tokens | medium 322s/24.6k | low 155s/11.1k
+# "medium" saves ~10%; "low" halves both and still emits a complete [SPEC].
+# Judges (--review-only) ignore this and keep Anthropic's "high" default.
+DEFAULT_CLAUDE_EFFORT = "low"
+
 # Models Codex CLI serves when authenticated with a ChatGPT account (not an
 # API key). Rotates with OpenAI's ChatGPT lineup — see
-# https://developers.openai.com/codex/models. Last verified 2026-08-10.
+# https://developers.openai.com/codex/models. Last verified 2026-08-31.
 CODEX_CHATGPT_MODELS = {
     "gpt-5.6-sol",
     "gpt-5.6-terra",
     "gpt-5.6-luna",
     "gpt-5.5",
-    "gpt-5.4",  # retires 2026-08-31
-    "gpt-5.4-mini",  # retires 2026-08-31
     "gpt-5.3-codex-spark",  # ChatGPT Pro only
 }
 
@@ -86,6 +96,8 @@ def codex_auth_mode() -> Optional[str]:
     try:
         data = json.loads(auth_path.read_text())
     except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
         return None
     mode = data.get("auth_mode")
     if mode:
@@ -114,7 +126,7 @@ def warn_codex_chatgpt_model_support(models: list[str]) -> None:
         print(
             f"Warning: Codex CLI is authenticated with a ChatGPT account, which "
             f"likely rejects: {', '.join(unsupported)}. ChatGPT-account models "
-            f"(as of 2026-08): gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5. "
+            f"(as of 2026-08-31): gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5. "
             f"Other models need Codex API-key auth or the OPENAI_API_KEY route.\n",
             file=sys.stderr,
         )
@@ -127,6 +139,7 @@ BEDROCK_MODEL_MAP = {
     "claude-fable-5": "anthropic.claude-fable-5",
     "claude-opus-5": "anthropic.claude-opus-5",
     "claude-sonnet-5": "anthropic.claude-sonnet-5",
+    "claude-opus-4.8": "anthropic.claude-opus-4-8",
     "claude-opus-4.7": "anthropic.claude-opus-4-7-20260416-v1:0",
     "claude-sonnet-4.6": "anthropic.claude-sonnet-4-6-20250627-v1:0",
     "claude-opus-4.6": "anthropic.claude-opus-4-6-20250627-v1:0",
@@ -352,10 +365,10 @@ def list_providers():
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
-            "claude-fable-5, claude-opus-5, claude-sonnet-5, claude-haiku-4-5",
+            "claude-fable-5, claude-opus-5, claude-sonnet-5, claude-opus-4-8, claude-haiku-4-5",
         ),
-        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-3.6-flash, gemini/gemini-3.5-flash"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.5, xai/grok-4.3, xai/grok-4.20-0309-reasoning"),
+        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-3.7-flash, gemini/gemini-3.6-flash"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.6, xai/grok-4.5, xai/grok-4.3"),
         (
             "Azure AI Foundry",
             "AZURE_AI_API_KEY",
@@ -367,10 +380,10 @@ def list_providers():
         (
             "OpenRouter",
             "OPENROUTER_API_KEY",
-            "openrouter/openai/gpt-5.5-pro, openrouter/anthropic/claude-opus-5",
+            "openrouter/openai/gpt-5.6-sol, openrouter/anthropic/claude-opus-5",
         ),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash"),
-        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.2, zai/glm-5.1, zai/glm-5-turbo"),
+        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.3, zai/glm-5.3-flash, zai/glm-5.2"),
         ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k3, moonshot/kimi-k2.7-code, moonshot/kimi-k2.6"),
         ("MiniMax", "MINIMAX_API_KEY", "minimax/MiniMax-M3, minimax/MiniMax-M2.7"),
     ]
@@ -465,13 +478,13 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
         ("OpenAI", "OPENAI_API_KEY", "gpt-5.6-sol"),
         ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-5"),
         ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.5"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.6"),
         # Azure AI Foundry skipped — deployment names are user-specific; use: test --models foundry/<name>
         ("Mistral", "MISTRAL_API_KEY", "mistral/mistral-large"),
         ("Groq", "GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),
-        ("OpenRouter", "OPENROUTER_API_KEY", "openrouter/openai/gpt-5.5-pro"),
+        ("OpenRouter", "OPENROUTER_API_KEY", "openrouter/openai/gpt-5.6-sol"),
         ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro"),
-        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.2"),
+        ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.3"),
         ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k3"),
         ("MiniMax", "MINIMAX_API_KEY", "minimax/MiniMax-M3"),
     ]
