@@ -444,7 +444,16 @@ def test_retired_gpt54_not_in_codex_chatgpt_lineup():
 
 
 @pytest.mark.parametrize(
-    "model", ["claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-opus-4-6"]
+    "model",
+    [
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-fable-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+    ],
 )
 def test_claude_debater_gets_default_effort(model):
     assert models.claude_tuning_params(model, review_only=False) == {

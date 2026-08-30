@@ -103,7 +103,23 @@ Run `python3 debate.py discover-models` to query provider APIs for the latest av
 
 **Model costs** are discovered dynamically from [LiteLLM's model registry](https://github.com/BerriAI/litellm) — no hardcoded pricing to go stale.
 
-**Claude 4.6+ behaviour.** Claude Opus/Sonnet/Fable 4.7 and newer accept only `temperature=1`, so the script omits the parameter for them automatically. They also default to `high` effort, which costs roughly 6 minutes and 26k output tokens per model per round on a full spec re-emit. In-loop debaters therefore run at `effort=low` (~2.6 minutes, ~11k tokens, still a complete spec); raise it with `--claude-effort`. Judges in `--review-only` keep Anthropic's `high` default.
+### Claude model behavior
+
+Two Anthropic-specific rules apply automatically. You do not need to configure either one.
+
+**Temperature.** Claude Opus 4.7 and newer — including Claude Opus 5, Sonnet 5, and Fable 5 — accept only `temperature=1`. `debate.py` detects these models and omits the parameter. Claude Sonnet 4.6, Opus 4.6, and Haiku 4.5 still accept a temperature and keep the existing behavior.
+
+**Effort.** Claude models from the 4.6 generation up — Sonnet 4.6, Opus 4.6, and every 4.7, 4.8, and 5 model — support Anthropic's `effort` control and default to `high`. On a full spec re-emit, `high` is slow and expensive, so `debate.py` runs in-loop debaters at `low`. Judges in `--review-only` keep the `high` default, because they emit `[AGREE]` or a short critique and never re-emit the spec.
+
+Measured on Claude Opus 5 with one technical-specification critique, 2026-08-31:
+
+| `--claude-effort` | Time | Output tokens |
+| --- | --- | --- |
+| `high` (Anthropic default) | 360s | 25,900 |
+| `medium` | 322s | 24,600 |
+| `low` (spec-debate default) | 155s | 11,100 |
+
+`medium` saves about 10 percent, so it is not a useful step-down. A full round through `debate.py` at `low` took 4m13s and 19,000 output tokens for $0.48. Response length varies between runs, so treat these as a guide rather than a guarantee. Raise the level with `--claude-effort` when you want a deeper critique.
 
 ### Azure AI Foundry
 
@@ -327,7 +343,7 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 | `--telegram, -t` | Enable Telegram notifications |
 | `--poll-timeout` | Telegram reply timeout in seconds (default: 60) |
 | `--codex-reasoning` | Reasoning effort for Codex CLI (low/medium/high/xhigh) |
-| `--claude-effort` | Effort for Claude 4.6+ debaters (low/medium/high/xhigh/max, default `low`) |
+| `--claude-effort` | Effort for Claude 4.6+ debaters (low/medium/high/xhigh/max, default: `low`) |
 | `--codex-search` | Enable web search for Codex CLI models |
 | `--timeout` | API/CLI call timeout in seconds (default: 600) |
 | `--json, -j` | Output as JSON |

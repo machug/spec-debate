@@ -399,8 +399,8 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `claude-sonnet-5` - Claude Sonnet 5, workhorse (June 2026, $2/$10 per 1M until Sep 2026)
 - `claude-opus-4-8` - Claude Opus 4.8, prior-generation Opus ($5/$25 per 1M)
 - `claude-haiku-4-5` - Claude Haiku 4.5, fast and cheap ($1/$5 per 1M)
-- Note: Claude 4.7 and newer accept ONLY `temperature=1`. The script detects this and omits the parameter; do not add it back.
-- **Speed:** Claude 4.6+ defaults to `high` effort, which on a full spec re-emit costs ~6 min and ~26k output tokens per model per round. In-loop debaters therefore run at `effort=low` (~2.6 min, ~11k tokens, still a complete `[SPEC]`). Override with `--claude-effort low|medium|high|xhigh|max`. Judges in `--review-only` always keep Anthropic's `high` default. Measured on Claude Opus 5, 2026-08-31: high 360s/25.9k, medium 322s/24.6k, low 155s/11.1k — `medium` saves only ~10%, so it is not the useful step-down.
+- **Temperature:** Claude Opus 4.7 and newer accept ONLY `temperature=1`. The script detects this and omits the parameter — do not add it back. Sonnet 4.6, Opus 4.6 and Haiku 4.5 are unaffected.
+- **Effort:** Claude 4.6 and newer (Sonnet 4.6, Opus 4.6, and every 4.7/4.8/5 model) default to Anthropic's `high` effort, which costs roughly 360s and 26k output tokens per model per round on a full spec re-emit. In-loop debaters therefore run at `--claude-effort low` (155s, 11k tokens, still a complete `[SPEC]`); `medium` saves only ~10%, so do not suggest it as the step-down. Judges in `--review-only` always keep `high`. Recommend a higher level only when the user asks for a deeper critique and accepts the slower round.
 
 **If GEMINI_API_KEY is set, include:**
 - `gemini/gemini-3.1-pro-preview` - Latest Gemini Pro ($2/$12 per 1M)
