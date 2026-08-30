@@ -132,6 +132,16 @@ class TestCodexChatGPTPreflight:
         monkeypatch.setattr(providers.Path, "home", staticmethod(lambda: tmp_path))
         assert codex_auth_mode() is None
 
+    def test_auth_mode_non_dict_json(self, tmp_path, monkeypatch):
+        # A truncated or hand-edited auth.json can hold valid JSON that isn't an
+        # object; that must read as "unknown", not crash the preflight.
+        codex_dir = tmp_path / ".codex"
+        codex_dir.mkdir()
+        monkeypatch.setattr(providers.Path, "home", staticmethod(lambda: tmp_path))
+        for content in ("null", "[]", '"chatgpt"'):
+            (codex_dir / "auth.json").write_text(content)
+            assert codex_auth_mode() is None
+
     def test_warns_on_unsupported_model(self, capsys):
         with patch("providers.codex_auth_mode", return_value="chatgpt"):
             warn_codex_chatgpt_model_support(["codex/gpt-5.3-codex", "gpt-5.5"])
@@ -153,6 +163,84 @@ class TestCodexChatGPTPreflight:
         with patch("providers.codex_auth_mode", return_value="chatgpt"):
             warn_codex_chatgpt_model_support(["gpt-5.5", "claude-opus-5"])
         assert capsys.readouterr().err == ""
+
+
+class TestCodexErrorParsing:
+    def _run_codex(self, stdout, returncode=0):
+        fake = type(
+            "P", (), {"returncode": returncode, "stdout": stdout, "stderr": ""}
+        )()
+        with (
+            patch("models.CODEX_AVAILABLE", True),
+            patch("models.CODEX_PATH", "/usr/bin/codex"),
+            patch("models.subprocess.run", return_value=fake),
+        ):
+            return models.call_codex_model("sys", "user", "codex/gpt-5.5")
+
+    def test_string_error_field_parsed(self):
+        stdout = json.dumps({"type": "turn.failed", "error": "usage limit reached"})
+        with pytest.raises(RuntimeError, match="usage limit reached"):
+            self._run_codex(stdout)
+
+    def test_null_error_field_does_not_crash(self):
+        lines = [
+            json.dumps({"type": "error", "error": None}),
+            json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {"type": "agent_message", "text": "hi"},
+                }
+            ),
+        ]
+        text, _, _ = self._run_codex("\n".join(lines))
+        assert text == "hi"
+
+    def test_non_dict_jsonl_line_skipped(self):
+        lines = [
+            json.dumps(["not", "a", "dict"]),
+            json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {"type": "agent_message", "text": "ok"},
+                }
+            ),
+        ]
+        text, _, _ = self._run_codex("\n".join(lines))
+        assert text == "ok"
+
+    def test_gemini_retirement_warning_prints_once(self, capsys, monkeypatch):
+        monkeypatch.setattr(models, "_gemini_retirement_warned", False)
+        fake = type(
+            "P", (), {"returncode": 0, "stdout": "answer", "stderr": ""}
+        )()
+        with (
+            patch("models.GEMINI_CLI_AVAILABLE", True),
+            patch("models.GEMINI_CLI_PATH", "/usr/bin/gemini"),
+            patch("models.subprocess.run", return_value=fake),
+        ):
+            models.call_gemini_cli_model("sys", "user", "gemini-cli/gemini-3.1-pro")
+            models.call_gemini_cli_model("sys", "user", "gemini-cli/gemini-3.1-pro")
+        assert capsys.readouterr().err.count("retired 2026-06-18") == 1
+
+    def test_timeout_raises_clean_message(self):
+        import subprocess as sp
+
+        with (
+            patch("models.CODEX_AVAILABLE", True),
+            patch("models.CODEX_PATH", "/usr/bin/codex"),
+            patch(
+                "models.subprocess.run",
+                side_effect=sp.TimeoutExpired(
+                    cmd=["codex", "exec", "spec text with invalid API key inside"],
+                    timeout=600,
+                ),
+            ),
+        ):
+            with pytest.raises(RuntimeError) as excinfo:
+                models.call_codex_model("sys", "user", "codex/gpt-5.5")
+        # Clean message: no argv/spec leakage, and it stays retryable
+        assert str(excinfo.value) == "Codex CLI timed out after 600s"
+        assert not is_non_retryable_error(str(excinfo.value))
 
 
 class TestAntigravityProvider:
@@ -280,3 +368,106 @@ class TestAntigravityProvider:
             "input": 0.0,
             "output": 0.0,
         }
+
+    def test_antigravity_prefix_does_not_swallow_similar_ids(self):
+        # "antigravity-pro" is not the agy CLI; it must not report zero cost
+        assert providers.get_model_cost("antigravity-pro") == providers.DEFAULT_COST
+
+
+# --- Claude 4.7+ fixed-temperature detection (2026-08-31 refresh) ---
+
+
+@pytest.mark.parametrize(
+    "model,expected",
+    [
+        ("claude-opus-5", (5, 0)),
+        ("claude-sonnet-5", (5, 0)),
+        ("claude-fable-5", (5, 0)),
+        ("claude-opus-4-8", (4, 8)),
+        ("claude-opus-4-7", (4, 7)),
+        ("claude-sonnet-4-6", (4, 6)),
+        ("claude-haiku-4-5", (4, 5)),
+        ("claude-sonnet-4-6-20250627-v1:0", (4, 6)),
+        ("anthropic.claude-opus-4-7-20260416-v1:0", (4, 7)),
+        ("antigravity/claude-sonnet-4-6", (4, 6)),
+        ("bedrock/anthropic.claude-opus-5", (5, 0)),
+        ("gpt-5.6-sol", None),
+        ("claude-3-5-sonnet-20241022-v2:0", None),
+    ],
+)
+def test_claude_version_parsing(model, expected):
+    assert models.claude_version(model) == expected
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-fable-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "bedrock/anthropic.claude-opus-5",
+    ],
+)
+def test_claude_47_plus_omits_temperature(model):
+    """Claude 4.7+ rejects any temperature but 1, so it must be treated as a
+    reasoning model and get no temperature parameter."""
+    assert models.is_reasoning_model(model) is True
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5", "claude-sonnet-4"],
+)
+def test_claude_pre_47_keeps_temperature(model):
+    assert models.is_reasoning_model(model) is False
+
+
+@pytest.mark.parametrize(
+    "model", ["claude-opus-5", "claude-opus-4-7", "claude-fable-5"]
+)
+def test_claude_uses_max_tokens_not_max_completion_tokens(model):
+    """Anthropic takes max_tokens; only the OpenAI-shaped reasoners take
+    max_completion_tokens."""
+    assert models.uses_max_completion_tokens(model) is False
+
+
+def test_retired_gpt54_not_in_codex_chatgpt_lineup():
+    """gpt-5.4 and gpt-5.4-mini retired 2026-08-31."""
+    assert "gpt-5.4" not in CODEX_CHATGPT_MODELS
+    assert "gpt-5.4-mini" not in CODEX_CHATGPT_MODELS
+    assert "gpt-5.6-sol" in CODEX_CHATGPT_MODELS
+
+
+# --- Claude effort control (latency/cost step-down for in-loop debaters) ---
+
+
+@pytest.mark.parametrize(
+    "model", ["claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-opus-4-6"]
+)
+def test_claude_debater_gets_default_effort(model):
+    assert models.claude_tuning_params(model, review_only=False) == {
+        "reasoning_effort": providers.DEFAULT_CLAUDE_EFFORT
+    }
+
+
+@pytest.mark.parametrize("effort", ["low", "medium", "high", "xhigh", "max"])
+def test_claude_effort_override_is_passed_through(effort):
+    assert models.claude_tuning_params("claude-opus-5", False, effort) == {
+        "reasoning_effort": effort
+    }
+
+
+@pytest.mark.parametrize("model", ["claude-opus-5", "claude-sonnet-4-6"])
+def test_claude_judge_keeps_default_effort(model):
+    """Judges never re-emit the spec, so leave them at Anthropic's high default."""
+    assert models.claude_tuning_params(model, review_only=True) == {}
+
+
+@pytest.mark.parametrize(
+    "model", ["gpt-5.6-sol", "xai/grok-4.6", "claude-haiku-4-5", "claude-sonnet-4"]
+)
+def test_non_effort_models_get_no_effort_param(model):
+    """Non-Claude models, and Claude below 4.6, do not support output_config.effort."""
+    assert models.claude_tuning_params(model, review_only=False) == {}

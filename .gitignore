@@ -16,6 +16,9 @@ venv/
 CLAUDE.md
 AGENTS.md
 
+# CLI provider session artifacts
+.antigravitycli/
+
 # skills.sh local installs
 .agents/
 .crush/

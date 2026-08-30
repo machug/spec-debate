@@ -32,7 +32,7 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
           ║                                                  ║
           ║  Skill.......: spec-debate                       ║
           ║  Author......: machug          (hughtec.com)     ║
-          ║  Version.....: 1.10.0                            ║
+          ║  Version.....: 1.11.0                            ║
           ║  Origin......: fork of zscole/adversarial-spec   ║
           ║  Released....: 2026                              ║
           ║  License.....: MIT                               ║
@@ -68,18 +68,18 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
 | OpenAI     | `OPENAI_API_KEY`       | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro` |
-| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-fable-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5` |
-| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.6-flash`, `gemini/gemini-3.5-flash` |
-| xAI        | `XAI_API_KEY`          | `xai/grok-4.5`, `xai/grok-4.3`, `xai/grok-4.20-0309-reasoning` |
+| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-fable-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-opus-4-8`, `claude-haiku-4-5` |
+| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.7-flash`, `gemini/gemini-3.6-flash` |
+| xAI        | `XAI_API_KEY`          | `xai/grok-4.6`, `xai/grok-4.5`, `xai/grok-4.3` |
 | Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
 | Groq       | `GROQ_API_KEY`         | `groq/llama-3.3-70b-versatile`              |
-| OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.5-pro`, `openrouter/anthropic/claude-opus-5` |
+| OpenRouter | `OPENROUTER_API_KEY`   | `openrouter/openai/gpt-5.6-sol`, `openrouter/anthropic/claude-opus-5` |
 | Deepseek   | `DEEPSEEK_API_KEY`     | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash` |
-| ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.2`, `zai/glm-5.1`, `zai/glm-5-turbo` |
+| ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.3`, `zai/glm-5.3-flash`, `zai/glm-5.2` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
 | MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
-| Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.6-luna`, `codex/gpt-5.5` — ChatGPT-account auth serves ONLY these (plus `gpt-5.3-codex-spark` on Pro; `gpt-5.4`/`-mini` retire 2026-08-31). `gpt-5.3-codex` and `gpt-5.5-pro` need API-key auth or the `OPENAI_API_KEY` route |
+| Codex CLI  | (ChatGPT subscription) | `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.6-luna`, `codex/gpt-5.5` — ChatGPT-account auth serves ONLY these (plus `gpt-5.3-codex-spark` on Pro; `gpt-5.4`/`-mini` retired 2026-08-31). `gpt-5.3-codex` and `gpt-5.5-pro` need API-key auth or the `OPENAI_API_KEY` route |
 | Antigravity CLI | (Google account)  | `antigravity/gemini-3.6-flash-high`, `antigravity/gemini-3.1-pro-high`, `antigravity/claude-sonnet-4-6`, `antigravity/gpt-oss-120b-medium` — slugs from `agy models` |
 | Gemini CLI | (RETIRED 2026-06-18)   | Consumer service ended; enterprise licenses only. Use `antigravity/` or `gemini/` (API key) instead |
 
@@ -97,7 +97,7 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 - Install: `npm install -g @openai/codex && codex login`
 - Reasoning effort: `--codex-reasoning` (minimal, low, medium, high, xhigh)
 - Web search: `--codex-search` (enables web search for current information)
-- **Auth mode matters:** `codex login` with a ChatGPT account serves only the ChatGPT lineup (`gpt-5.6-sol`/`terra`/`luna`, `gpt-5.5`); other models 400 with "not supported when using Codex with a ChatGPT account". The debate script warns upfront and fails fast (no retries) on this error. API-key auth lifts the restriction.
+- **Auth mode matters:** `codex login` with a ChatGPT account serves only the ChatGPT lineup (`gpt-5.6-sol`/`terra`/`luna`, `gpt-5.5` — `gpt-5.4`/`-mini` retired 2026-08-31); other models 400 with "not supported when using Codex with a ChatGPT account". The debate script warns upfront and fails fast (no retries) on this error. API-key auth lifts the restriction.
 
 **Antigravity CLI Setup (replaces Gemini CLI):**
 - Install: `curl -fsSL https://antigravity.google/cli/install.sh | bash`
@@ -163,7 +163,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py bedrock
 
 Users can specify models using friendly names (e.g., `claude-sonnet-4.6`), which are automatically mapped to Bedrock model IDs. Built-in mappings include:
 
-- `claude-sonnet-4.6`, `claude-opus-4.6`, `claude-sonnet-4`, `claude-opus-4`, `claude-haiku-4.5`
+- `claude-opus-4.8`, `claude-opus-4.7`, `claude-sonnet-4.6`, `claude-opus-4.6`, `claude-sonnet-4`, `claude-opus-4`, `claude-haiku-4.5`
 - `llama-3-8b`, `llama-3-70b`, `llama-3.1-70b`, `llama-3.1-405b`
 - `mistral-7b`, `mistral-large`, `mixtral-8x7b`
 - `cohere-command`, `cohere-command-r`, `cohere-command-r-plus`
@@ -384,12 +384,12 @@ cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py provide
 Then present available models to the user using AskUserQuestion with multiSelect. Build the options list based on the discover-models output. If discover-models was not run, use these defaults per provider:
 
 **If OPENAI_API_KEY is set, include:**
-- `gpt-5.6-sol` - Latest flagship (July 2026, $5/$30 per 1M)
-- `gpt-5.6-terra` - Mid tier ($2.5/$15 per 1M)
-- `gpt-5.6-luna` - Small/cheap tier ($1/$6 per 1M)
-- `gpt-5.5` - Prior flagship, good for general critique (unified Codex+GPT line)
-- `gpt-5.5-pro` - Stronger reasoning, slower (API-only; ChatGPT subscription blocks it)
-- `gpt-5.4-mini` - Lightweight, cost-effective
+- `gpt-5.6-sol` - Latest flagship (July 2026, $4/$20 per 1M)
+- `gpt-5.6-terra` - Mid tier ($2/$12 per 1M)
+- `gpt-5.6-luna` - Small/cheap tier ($0.2/$1.2 per 1M)
+- `gpt-5.5` - Prior flagship, good for general critique ($5/$30 per 1M; unified Codex+GPT line)
+- `gpt-5.5-pro` - Stronger reasoning, slower ($30/$180 per 1M; API-only, ChatGPT subscription blocks it)
+- Note: `gpt-5.4` and `gpt-5.4-mini` retired 2026-08-31 — do not offer them
 
 **If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-5.6-sol`, `codex/gpt-5.5`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro` and `gpt-5.3-codex`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
 
@@ -397,18 +397,23 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `claude-fable-5` - Claude Fable 5, frontier flagship (June 2026, $10/$50 per 1M)
 - `claude-opus-5` - Claude Opus 5, near-frontier at half the price (July 2026, $5/$25 per 1M)
 - `claude-sonnet-5` - Claude Sonnet 5, workhorse (June 2026, $2/$10 per 1M until Sep 2026)
-- `claude-haiku-4-5` - Claude Haiku 4.5, fast and cheap
+- `claude-opus-4-8` - Claude Opus 4.8, prior-generation Opus ($5/$25 per 1M)
+- `claude-haiku-4-5` - Claude Haiku 4.5, fast and cheap ($1/$5 per 1M)
+- Note: Claude 4.7 and newer accept ONLY `temperature=1`. The script detects this and omits the parameter; do not add it back.
+- **Speed:** Claude 4.6+ defaults to `high` effort, which on a full spec re-emit costs ~6 min and ~26k output tokens per model per round. In-loop debaters therefore run at `effort=low` (~2.6 min, ~11k tokens, still a complete `[SPEC]`). Override with `--claude-effort low|medium|high|xhigh|max`. Judges in `--review-only` always keep Anthropic's `high` default. Measured on Claude Opus 5, 2026-08-31: high 360s/25.9k, medium 322s/24.6k, low 155s/11.1k — `medium` saves only ~10%, so it is not the useful step-down.
 
 **If GEMINI_API_KEY is set, include:**
-- `gemini/gemini-3.1-pro-preview` - Latest Gemini Pro
-- `gemini/gemini-3.6-flash` - Latest Gemini Flash ($1.5/$7.5 per 1M)
-- `gemini/gemini-3.5-flash` - Prior Gemini Flash, fast
+- `gemini/gemini-3.1-pro-preview` - Latest Gemini Pro ($2/$12 per 1M)
+- `gemini/gemini-3.7-flash` - Latest Gemini Flash ($0.75/$3.75 per 1M)
+- `gemini/gemini-3.6-flash` - Prior Gemini Flash ($0.75/$3.75 per 1M)
+- `gemini/gemini-3.5-flash` - Older Gemini Flash, fast
 - `gemini/gemini-2.5-pro` - Stable Gemini Pro
 
 **If XAI_API_KEY is set, include:**
-- `xai/grok-4.5` - Latest flagship Grok ($2/$6 per 1M; hybrid reasoner, accepts temperature)
-- `xai/grok-4.3` - Prior flagship ($1.25/$2.5 per 1M)
-- `xai/grok-4.20-0309-reasoning` - Older flagship with reasoning ($2/$6 per 1M)
+- `xai/grok-4.6` - Latest flagship Grok ($2/$6 per 1M; hybrid reasoner, accepts temperature)
+- `xai/grok-4.5` - Prior flagship ($2/$6 per 1M)
+- `xai/grok-4.3` - Older flagship ($1.25/$2.5 per 1M)
+- `xai/grok-4.20-0309-reasoning` - Legacy flagship with reasoning ($1.25/$2.5 per 1M)
 
 **If AZURE_AI_API_KEY is set, include:**
 - `foundry/claude-opus-4-7` - Claude via Azure Foundry
@@ -427,9 +432,10 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - Note: the legacy `deepseek-chat` alias was removed from the API — use `deepseek-v4-pro`
 
 **If ZAI_API_KEY is set, include:**
-- `zai/glm-5.2` - Latest GLM (July 2026)
-- `zai/glm-5.1` - Prior GLM (April 2026, MIT license, agentic)
-- `zai/glm-5-turbo` - Fast GLM variant
+- `zai/glm-5.3` - Latest GLM ($1.4/$4.4 per 1M)
+- `zai/glm-5.3-flash` - Fast/cheap GLM ($0.15/$0.5 per 1M)
+- `zai/glm-5.2` - Prior GLM (July 2026; not yet in the LiteLLM cost registry, so cost is estimated)
+- `zai/glm-5.1` - Older GLM (April 2026, MIT license, agentic)
 
 **If MOONSHOT_API_KEY is set, include:**
 - `moonshot/kimi-k3` - Latest Kimi flagship (July 2026; temp fixed at 1)
@@ -446,7 +452,7 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `codex/gpt-5.6-terra` - GPT-5.6 Terra, balanced
 - `codex/gpt-5.6-luna` - GPT-5.6 Luna, fast
 - `codex/gpt-5.5` - Prior frontier, still served
-- Note: ChatGPT-account auth serves ONLY the models above (plus `gpt-5.3-codex-spark` on ChatGPT Pro; `gpt-5.4`/`-mini` retire 2026-08-31). Anything else — `gpt-5.3-codex`, `gpt-5.5-pro` — 400s with "not supported when using Codex with a ChatGPT account"; the script fails fast and prints a hint. Codex API-key auth lifts the restriction.
+- Note: ChatGPT-account auth serves ONLY the models above (plus `gpt-5.3-codex-spark` on ChatGPT Pro; `gpt-5.4`/`-mini` retired 2026-08-31). Anything else — `gpt-5.3-codex`, `gpt-5.5-pro` — 400s with "not supported when using Codex with a ChatGPT account"; the script fails fast and prints a hint. Codex API-key auth lifts the restriction.
 
 **If Antigravity CLI (`agy`) is installed, include:**
 - `antigravity/gemini-3.6-flash-high` - Gemini 3.6 Flash, high effort

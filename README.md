@@ -82,15 +82,15 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 | Provider | Env Var | Example Models |
 |----------|---------|----------------|
 | OpenAI | `OPENAI_API_KEY` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro` |
-| Anthropic | `ANTHROPIC_API_KEY` | `claude-fable-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5` |
-| Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.6-flash`, `gemini/gemini-3.5-flash` |
-| xAI | `XAI_API_KEY` | `xai/grok-4.5`, `xai/grok-4.3`, `xai/grok-4.20-0309-reasoning` |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-fable-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-opus-4-8`, `claude-haiku-4-5` |
+| Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.7-flash`, `gemini/gemini-3.6-flash` |
+| xAI | `XAI_API_KEY` | `xai/grok-4.6`, `xai/grok-4.5`, `xai/grok-4.3` |
 | Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
-| OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.5-pro` |
+| OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.6-sol` |
 | Mistral | `MISTRAL_API_KEY` | `mistral/mistral-large`, `mistral/codestral` |
 | Groq | `GROQ_API_KEY` | `groq/llama-3.3-70b-versatile` |
 | Deepseek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash` |
-| ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5.2`, `zai/glm-5.1`, `zai/glm-5-turbo` |
+| ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5.3`, `zai/glm-5.3-flash`, `zai/glm-5.2` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
 | MiniMax | `MINIMAX_API_KEY` | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
 | Codex CLI | ChatGPT subscription | `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.5` (ChatGPT-account auth serves only the ChatGPT lineup) |
@@ -102,6 +102,8 @@ Run `python3 debate.py discover-models` to query provider APIs for the latest av
 **No API key?** Install [Codex CLI](https://github.com/openai/codex) (`npm install -g @openai/codex`) or [Antigravity CLI](https://antigravity.google) (`curl -fsSL https://antigravity.google/cli/install.sh | bash`, then run `agy` once to sign in) to use your existing ChatGPT or Google subscription. Note: ChatGPT-account Codex serves only the current ChatGPT lineup (`gpt-5.6-sol`/`terra`/`luna`, `gpt-5.5`); other models need API-key auth.
 
 **Model costs** are discovered dynamically from [LiteLLM's model registry](https://github.com/BerriAI/litellm) — no hardcoded pricing to go stale.
+
+**Claude 4.6+ behaviour.** Claude Opus/Sonnet/Fable 4.7 and newer accept only `temperature=1`, so the script omits the parameter for them automatically. They also default to `high` effort, which costs roughly 6 minutes and 26k output tokens per model per round on a full spec re-emit. In-loop debaters therefore run at `effort=low` (~2.6 minutes, ~11k tokens, still a complete spec); raise it with `--claude-effort`. Judges in `--review-only` keep Anthropic's `high` default.
 
 ### Azure AI Foundry
 
@@ -325,6 +327,7 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 | `--telegram, -t` | Enable Telegram notifications |
 | `--poll-timeout` | Telegram reply timeout in seconds (default: 60) |
 | `--codex-reasoning` | Reasoning effort for Codex CLI (low/medium/high/xhigh) |
+| `--claude-effort` | Effort for Claude 4.6+ debaters (low/medium/high/xhigh/max, default `low`) |
 | `--codex-search` | Enable web search for Codex CLI models |
 | `--timeout` | API/CLI call timeout in seconds (default: 600) |
 | `--json, -j` | Output as JSON |

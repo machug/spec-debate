@@ -95,6 +95,7 @@ from models import (  # noqa: E402
 )
 from prompts import EMIT_PLAN_PROMPT, EXPORT_TASKS_PROMPT, get_doc_type_name  # noqa: E402
 from providers import (  # noqa: E402
+    DEFAULT_CLAUDE_EFFORT,
     DEFAULT_CODEX_REASONING,
     discover_models,
     find_foundry_regions_for_model,
@@ -360,6 +361,16 @@ def add_codex_arguments(parser: argparse.ArgumentParser) -> None:
         "--codex-search",
         action="store_true",
         help="Enable web search for Codex CLI models",
+    )
+    parser.add_argument(
+        "--claude-effort",
+        default=DEFAULT_CLAUDE_EFFORT,
+        choices=["low", "medium", "high", "xhigh", "max"],
+        help=(
+            "Effort for Claude 4.6+ debaters (default: "
+            f"{DEFAULT_CLAUDE_EFFORT}; higher is slower and more thorough). "
+            "Judges in --review-only always use Anthropic's high default."
+        ),
     )
 
 
@@ -1225,6 +1236,7 @@ def run_critique(
         bedrock_mode,
         bedrock_region,
         getattr(args, "review_only", False),
+        args.claude_effort,
     )
 
     errors = [r for r in results if r.error]
