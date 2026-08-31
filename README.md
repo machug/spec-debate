@@ -41,11 +41,19 @@ claude plugin install spec-debate@machug
 npx skills add machug/spec-debate
 ```
 
-**Dependencies:**
+**Dependencies:** you do not need to install these by hand. The skill runs `scripts/bootstrap.sh` first, which installs them into a cached virtual environment at `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv` and prints the interpreter to use:
 
 ```bash
-pip install litellm                  # Required
-pip install azure-ai-inference       # Optional, for Azure AI Foundry
+SPEC_DEBATE_PY=$(bash skills/spec-debate/scripts/bootstrap.sh)
+"$SPEC_DEBATE_PY" skills/spec-debate/scripts/debate.py providers
+```
+
+The environment sits outside the plugin directory on purpose. Plugin installs are version-keyed, so an environment stored beside the code would be rebuilt on every update. Set `SPEC_DEBATE_VENV` to move it. `bootstrap.sh` uses `uv` when it is available, falls back to `python3 -m venv`, and rebuilds the environment automatically if it breaks.
+
+To install the dependencies yourself instead, use `requirements.txt`:
+
+```bash
+pip install -r requirements.txt      # litellm (required) + azure-ai-inference (Azure AI Foundry)
 ```
 
 ## Quick Start
