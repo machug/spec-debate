@@ -32,11 +32,11 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
           ║                                                  ║
           ║  Skill.......: spec-debate                       ║
           ║  Author......: machug          (hughtec.com)     ║
-          ║  Version.....: 1.11.0                            ║
+          ║  Version.....: 1.12.0                            ║
           ║  Origin......: fork of zscole/adversarial-spec   ║
           ║  Released....: 2026                              ║
           ║  License.....: MIT                               ║
-          ║  Requires....: Python 3.10+, litellm             ║
+          ║  Requires....: Python 3.10+ (deps auto-install)  ║
           ║                                                  ║
           ╠══════════════════════════════════════════════════╣
           ║               PIPELINE OVERVIEW                  ║
@@ -58,8 +58,30 @@ Generate and refine specifications through iterative debate with multiple LLMs u
 
 ## Requirements
 
-- Python 3.10+ with `litellm` package installed
+- Python 3.10+
 - API key for at least one provider (set via environment variable), OR AWS Bedrock configured, OR CLI tools (codex, agy) installed
+
+## Setup: resolve the interpreter first
+
+**Run this once at the start of every session, before any other command in this skill.** It prints the path to a Python interpreter that can import `litellm`, installing the dependencies into a cached virtual environment on first use.
+
+```bash
+SPEC_DEBATE_PY=$(bash ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts/bootstrap.sh)
+```
+
+Then use `"$SPEC_DEBATE_PY"` everywhere this skill writes `python3`. For example:
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && "$SPEC_DEBATE_PY" debate.py providers
+```
+
+The script prints only the interpreter path on stdout, so it is safe to capture. Progress messages go to stderr. It reuses an existing environment on later runs, uses `uv` when available and falls back to `python3 -m venv`, and rebuilds automatically if the environment breaks.
+
+Do not run `pip install litellm` by hand, and do not build your own virtual environment. If `bootstrap.sh` fails, report its stderr rather than improvising an install.
+
+The environment lives in `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv`, deliberately outside the plugin directory: plugin installs are version-keyed, so an environment stored beside the code would be rebuilt on every plugin update. Override the location with `SPEC_DEBATE_VENV` if needed.
+
+**Checking the installed version:** `litellm` has no `__version__` attribute. Use `importlib.metadata.version("litellm")`. Reading `litellm.__version__` raises `AttributeError` and makes a working install look broken.
 
 **IMPORTANT: Do NOT install the `llm` package (Simon Willison's tool).** This skill uses `litellm` for API providers and dedicated CLI tools (`codex`, `agy`) for subscription-based models. Installing `llm` is unnecessary and may cause confusion.
 
