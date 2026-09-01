@@ -364,17 +364,43 @@ class TestPlanTruncationReason:
         assert reason is not None
         assert "finish_reason=length" in reason
 
-    def test_output_tokens_at_cap_is_truncated(self):
-        reason = debate.plan_truncation_reason(COMPLETE_PLAN, "stop", 32000, 32000)
+    def test_output_tokens_at_cap_without_a_clean_stop_is_truncated(self):
+        reason = debate.plan_truncation_reason(COMPLETE_PLAN, None, 32000, 32000)
         assert reason is not None
         assert "32,000" in reason
+
+    def test_clean_stop_at_the_cap_is_not_truncated(self):
+        # Gemini counts hidden reasoning tokens inside completion_tokens while
+        # capping only visible output, so a complete plan can report >= budget.
+        # A provider that says "stop" is believed over the token count.
+        assert debate.plan_truncation_reason(COMPLETE_PLAN, "stop", 32000, 32000) is None
 
     def test_unterminated_code_fence_is_truncated(self):
         # The real-world shape: plan stops mid-string inside a test body.
         cut = '# Plan\n\n```python\nassert manifest["prompt_hashes"]["c'
         reason = debate.plan_truncation_reason(cut, "stop", 500, 16000)
         assert reason is not None
-        assert "fences" in reason
+        assert "unterminated code block" in reason
+
+    def test_fence_inside_a_string_literal_is_not_truncated(self):
+        # EMIT_PLAN_PROMPT demands complete test code. A test that asserts on a
+        # markdown fence puts ``` inside a string literal; counting occurrences
+        # flips parity and condemns a perfectly complete plan.
+        plan = (
+            '# Plan\n\n## Task 0\n\n```python\n'
+            'assert "```" in open("README.md").read()\n'
+            '```\n\n## Task inventory\n\n1. Task 0\n'
+        )
+        assert plan.count("```") % 2 == 1  # the old check would have failed here
+        assert debate.plan_truncation_reason(plan, "stop", 500, 16000) is None
+
+    def test_four_backtick_fence_wrapping_three_is_not_truncated(self):
+        plan = "# Plan\n\n````markdown\n```bash\nls\n```\n````\n\n## Task inventory\n"
+        assert debate.plan_truncation_reason(plan, "stop", 500, 16000) is None
+
+    def test_tilde_fence_left_open_is_truncated(self):
+        plan = "# Plan\n\n~~~python\nx = 1\n"
+        assert debate.plan_truncation_reason(plan, "stop", 500, 16000) is not None
 
     def test_missing_finish_reason_is_not_truncated(self):
         assert debate.plan_truncation_reason(COMPLETE_PLAN, None, 500, 16000) is None

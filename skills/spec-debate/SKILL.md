@@ -1070,12 +1070,12 @@ python3 debate.py emit-plan \
   --pr-scope "data engine + schemas" \
   --models claude-opus-5
 
-# Loop over stacked PRs
+# Loop over stacked PRs — stop on the first truncated plan
 for n in 1 2 3 4; do
   python3 debate.py emit-plan \
     --spec docs/plans/2026-04-22-feature.spec-debate-final.md \
     --pr-label "PR-$n" \
-    --models claude-opus-5
+    --models claude-opus-5 || { echo "PR-$n plan is incomplete; stopping." >&2; break; }
 done
 ```
 
@@ -1083,7 +1083,9 @@ Output:
 - Default path: sibling of the spec with `-<pr-label>.plan.md` appended (stripping `.spec-debate-final` / `.spec` from the stem).
 - Override with `--plan-out <path>`.
 
-**Truncation is a hard failure.** A large spec can push the plan past the model's output cap, and a plan cut off mid-task is worse than no plan: its final tasks, verification section and task inventory are simply absent, and `executing-plans` cannot tell. `emit-plan` now detects this (`finish_reason=length`, output tokens at the cap, or an odd number of ``` fences), writes the file with a `<!-- TRUNCATED: ... -->` header so you can inspect it, and **exits 1**. Treat exit 1 from `emit-plan` as "do not execute this plan" — re-run with a narrower `--pr-scope`, or split the spec across two calls. It also warns (exit 0) if the plan has no `Task inventory` section.
+**Truncation is a hard failure.** A large spec can push the plan past the model's output cap, and a plan cut off mid-task is worse than no plan: its final tasks, verification section and task inventory are simply absent, and `executing-plans` cannot tell. `emit-plan` detects this three ways — `finish_reason=length`, output tokens at the cap when the provider did *not* report a clean stop, or a code fence left open at end of file — then writes the file with a `<!-- TRUNCATED: ... -->` header so you can inspect it, and **exits 1**. Treat exit 1 from `emit-plan` as "do not execute this plan": re-run with a narrower `--pr-scope`, or split the spec across two calls. It also warns (exit 0) if the plan has no `Task inventory` section.
+
+Check that exit code. A `for` loop over stacked PRs reports only its last iteration's status, so an unguarded loop silently discards every earlier failure.
 
 When to use:
 - After the spec converges (Step 9 of the process).

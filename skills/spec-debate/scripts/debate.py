@@ -90,7 +90,9 @@ from models import (  # noqa: E402
     generate_diff,
     get_critique_summary,
     is_reasoning_model,
+    has_unterminated_fence,
     load_context_files,
+    output_token_budget,
     strip_spec_block,
     uses_max_completion_tokens,
 )
@@ -983,6 +985,16 @@ PLAN_TRUNCATION_MARKER = (
 )
 
 
+CLEAN_FINISH_REASONS = frozenset(
+    {"stop", "end_turn", "eos", "complete", "completed", "tool_calls"}
+)
+
+
+def _finished_cleanly(finish_reason: Optional[str]) -> bool:
+    """True when the provider explicitly reported a normal end of generation."""
+    return str(finish_reason or "").lower() in CLEAN_FINISH_REASONS
+
+
 def plan_truncation_reason(
     content: str,
     finish_reason: Optional[str],
@@ -1000,16 +1012,17 @@ def plan_truncation_reason(
             f"model stopped at its {budget:,}-token output cap "
             "(finish_reason=length)"
         )
-    if output_tokens >= budget:
+    # Only trust the token count when the provider did NOT report a clean stop.
+    # Gemini reports hidden reasoning tokens inside completion_tokens while
+    # capping only visible output, so a complete plan can legitimately report
+    # tokens at or over the budget.
+    if output_tokens >= budget and not _finished_cleanly(finish_reason):
         return (
             f"model emitted {output_tokens:,} tokens, reaching its "
             f"{budget:,}-token output cap"
         )
-    if content.count("```") % 2:
-        return (
-            "odd number of ``` fences - the document ends inside an "
-            "unterminated code block"
-        )
+    if has_unterminated_fence(content):
+        return "the document ends inside an unterminated code block"
     return None
 
 
@@ -1135,10 +1148,10 @@ def handle_emit_plan(args: argparse.Namespace, models: list[str]) -> None:
         }
         # Moonshot/xAI reasoning models need max_tokens, not max_completion_tokens
         if uses_max_completion_tokens(models[0]):
-            budget = EMIT_PLAN_MAX_REASONING_TOKENS
+            budget = max(EMIT_PLAN_MAX_REASONING_TOKENS, output_token_budget(models[0]))
             completion_kwargs["max_completion_tokens"] = budget
         elif is_reasoning_model(models[0]):
-            budget = EMIT_PLAN_MAX_REASONING_TOKENS
+            budget = max(EMIT_PLAN_MAX_REASONING_TOKENS, output_token_budget(models[0]))
             completion_kwargs["max_tokens"] = budget
         else:
             budget = EMIT_PLAN_MAX_TOKENS

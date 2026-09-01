@@ -273,6 +273,30 @@ If you genuinely agree after careful review, output:
 2. [AGREE] on its own line
 3. The final spec between [SPEC] and [/SPEC] tags"""
 
+PRESS_REVIEW_ONLY_PROMPT_TEMPLATE = """This is round {round} of adversarial spec development. You previously indicated agreement with this document.
+
+Here is the current {doc_type_name}:
+
+{spec}
+
+{context_section}
+**IMPORTANT: Please confirm your agreement by thoroughly reviewing the ENTIRE document.**
+
+Before saying [AGREE], you MUST:
+1. Confirm you have read every section of this document
+2. List at least 3 specific sections you reviewed and what you verified in each
+3. Explain WHY you agree - what makes this document complete and production-ready?
+4. Identify ANY remaining concerns, however minor (even stylistic or optional improvements)
+
+If after this thorough review you find issues you missed before, provide your critique.
+
+If you genuinely agree after careful review, output:
+1. Your verification (sections reviewed, reasons for agreement, minor concerns)
+2. [AGREE] on its own line
+
+You are a judge, not an editor. Do NOT reproduce the document and do NOT use
+[SPEC] tags - the author already holds the document."""
+
 EXPORT_TASKS_PROMPT = """Analyze this {doc_type_name} and extract all actionable tasks.
 
 Document:
