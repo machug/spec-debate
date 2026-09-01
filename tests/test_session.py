@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 
 import pytest
@@ -120,3 +121,68 @@ class TestSaveCheckpoint:
 
         with pytest.raises(ValueError, match="Invalid session ID"):
             save_checkpoint("content", 1, session_id="../../etc/evil")
+
+
+class TestCritiquePersistedInHistory:
+    """run_critique must write the argument, not just the verdict.
+
+    Testing strip_spec_block alone would not catch the original bug: the
+    critique text existed, run_critique simply never stored it.
+    """
+
+    def _run(self, tmp_path, monkeypatch, response, spec="# Spec\n"):
+        import debate
+        import session
+        from models import ModelResponse
+
+        monkeypatch.setattr(session, "SESSIONS_DIR", tmp_path)
+        monkeypatch.setattr(session, "CHECKPOINTS_DIR", tmp_path / "checkpoints")
+        monkeypatch.setattr(
+            debate,
+            "call_models_parallel",
+            lambda *a, **k: [
+                ModelResponse(
+                    model="stub", response=response, agreed=False, spec="# Revised\n"
+                )
+            ],
+        )
+
+        state = SessionState(
+            session_id="wiring", spec=spec, round=1, doc_type="tech", models=["stub"]
+        )
+        args = argparse.Namespace(
+            review_only=False,
+            press=False,
+            focus=None,
+            persona=None,
+            preserve_intent=False,
+            codex_search=False,
+            codex_reasoning="high",
+            claude_effort="low",
+            timeout=600,
+            round=1,
+            doc_type="tech",
+            session="wiring",
+            telegram=False,
+            json=True,
+        )
+        debate.run_critique(args, spec, ["stub"], state, None, False, None)
+        return json.loads((tmp_path / "wiring.json").read_text())
+
+    def test_history_stores_the_critique_text(self, tmp_path, monkeypatch, capsys):
+        saved = self._run(
+            tmp_path, monkeypatch, "1. No retry budget\n2. No rollback\n"
+        )
+        entry = saved["history"][0]["models"][0]
+        assert entry["model"] == "stub"
+        assert "No retry budget" in entry["critique"]
+
+    def test_history_omits_the_reemitted_document(self, tmp_path, monkeypatch, capsys):
+        saved = self._run(
+            tmp_path,
+            monkeypatch,
+            "1. No retry budget\n\n[SPEC]\n# A very long revised document\n[/SPEC]",
+        )
+        critique = saved["history"][0]["models"][0]["critique"]
+        assert "No retry budget" in critique
+        assert "very long revised document" not in critique

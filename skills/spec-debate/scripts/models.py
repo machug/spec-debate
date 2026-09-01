@@ -34,6 +34,7 @@ from prompts import (
     PRESS_PROMPT_TEMPLATE,
     REVIEW_PROMPT_TEMPLATE,
     get_doc_type_name,
+    PRESS_REVIEW_ONLY_PROMPT_TEMPLATE,
     get_system_prompt,
 )
 from providers import (
@@ -343,6 +344,129 @@ def extract_spec(response: str) -> Optional[str]:
     start = response.find("[SPEC]") + len("[SPEC]")
     end = response.find("[/SPEC]")
     return response[start:end].strip()
+
+
+FENCE_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})(?P<info>.*)$")
+ATX_HEADING_RE = re.compile(r"^ {0,3}(#{1,2})[ \t]+(.+?)[ \t]*$")
+SETEXT_UNDERLINE_RE = re.compile(r"^ {0,3}(=+|-+)[ \t]*$")
+
+
+def _fence_state(line: str, open_fence: Optional[str]) -> tuple[Optional[str], bool]:
+    """Advance code-fence state for one line.
+
+    Returns (new open fence or None, whether this line was a fence marker).
+    """
+    m = FENCE_RE.match(line)
+    if not m:
+        return open_fence, False
+    fence = m.group("fence")
+    if open_fence is None:
+        return fence, True
+    closes = (
+        fence[0] == open_fence[0]
+        and len(fence) >= len(open_fence)
+        and not m.group("info").strip()
+    )
+    return (None if closes else open_fence), True
+
+
+def has_unterminated_fence(text: str) -> bool:
+    """True if the document ends inside an open ``` or ~~~ code fence.
+
+    Counting occurrences of ``` does not work. A fence sequence can appear
+    inside a string literal in a code sample (`assert "```" in body`), and
+    CommonMark lets a four-backtick fence wrap three-backtick content. Both are
+    normal in an emitted plan and both break parity, so a naive count reports a
+    complete plan as truncated. Track opens and closes per line instead.
+    """
+    open_fence = None
+    for line in text.split("\n"):
+        open_fence, _ = _fence_state(line, open_fence)
+    return open_fence is not None
+
+
+def strip_spec_block(response: str) -> str:
+    """Return the model's critique prose with any re-emitted [SPEC] block removed.
+
+    This is the part of a response worth persisting: the argument, not the copy
+    of the document the caller already holds.
+
+    Cuts the tagged span rather than splitting on the first "[SPEC]".
+    PRESS_PROMPT_TEMPLATE puts the literal string "[SPEC]" in the user message,
+    so a model that echoes its instructions before critiquing would otherwise
+    lose the entire critique. An unclosed [SPEC] means a truncated re-emit; cut
+    from the last opening tag so the prose before it survives.
+    """
+    cleaned = re.sub(r"\[SPEC\].*?\[/SPEC\]", "", response, flags=re.DOTALL)
+    if "[SPEC]" in cleaned and "[/SPEC]" not in cleaned:
+        cleaned = cleaned[: cleaned.rindex("[SPEC]")]
+    return cleaned.strip()
+
+
+def _normalize_heading(text: str) -> str:
+    """Heading text without a closing ### sequence or runs of whitespace."""
+    return re.sub(r"\s+", " ", re.sub(r"[ \t]+#+[ \t]*$", "", text)).strip()
+
+
+def markdown_headings(text: str) -> list[str]:
+    """Top-level (#) and second-level (##) headings, in document order.
+
+    Skips fenced code blocks: `# install deps` inside a bash sample is a
+    comment, not a heading, and counting it produces false "dropped heading"
+    warnings on the ordinary case — which teaches the reader to ignore the one
+    real warning this exists to raise. Handles setext (underlined) headings and
+    closed ATX headings too, since a spec written either way needs the same
+    protection.
+    """
+    headings = []
+    open_fence = None
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        open_fence, was_fence = _fence_state(line, open_fence)
+        if was_fence or open_fence is not None:
+            continue
+        atx = ATX_HEADING_RE.match(line)
+        if atx:
+            headings.append(_normalize_heading(atx.group(2)))
+            continue
+        if (
+            line.strip()
+            and i + 1 < len(lines)
+            and SETEXT_UNDERLINE_RE.match(lines[i + 1])
+        ):
+            headings.append(_normalize_heading(line))
+    return headings
+
+
+def dropped_headings(original: str, revised: str) -> list[str]:
+    """Headings present in `original` but missing from `revised`, in order.
+
+    Mechanical backstop for --preserve-intent: a model can obey every wording
+    rule in PRESERVE_INTENT_PROMPT and still swap the document's whole skeleton
+    for a generic template, taking the evidence sections with it.
+    """
+    kept = set(markdown_headings(revised))
+    seen: set[str] = set()
+    missing = []
+    for h in markdown_headings(original):
+        if h not in kept and h not in seen:
+            seen.add(h)
+            missing.append(h)
+    return missing
+
+
+def warn_dropped_headings(model: str, original: str, revised: str) -> list[str]:
+    """Print a warning naming headings the revision dropped. Returns them."""
+    missing = dropped_headings(original, revised)
+    if missing:
+        shown = ", ".join(missing[:5])
+        more = f" (+{len(missing) - 5} more)" if len(missing) > 5 else ""
+        print(
+            f"Warning: {model} dropped {len(missing)} heading(s) from the input "
+            f"despite --preserve-intent: {shown}{more}",
+            file=sys.stderr,
+        )
+    return missing
 
 
 def extract_tasks(response: str) -> list[dict]:
@@ -982,7 +1106,7 @@ def call_single_model(
         if not model.startswith("bedrock/"):
             actual_model = f"bedrock/{model}"
 
-    system_prompt = get_system_prompt(doc_type, persona, review_only)
+    system_prompt = get_system_prompt(doc_type, persona, review_only, press)
     doc_type_name = get_doc_type_name(doc_type)
 
     focus_section = ""
@@ -996,7 +1120,15 @@ def call_single_model(
 
     context_section = context if context else ""
 
-    template = PRESS_PROMPT_TEMPLATE if press else REVIEW_PROMPT_TEMPLATE
+    if press:
+        # In judge mode the plain press template's closing "emit the final spec
+        # between [SPEC] tags" contradicts the reviewer suffix's "do NOT use
+        # [SPEC] tags". Leaving both in place only moves the conflict.
+        template = (
+            PRESS_REVIEW_ONLY_PROMPT_TEMPLATE if review_only else PRESS_PROMPT_TEMPLATE
+        )
+    else:
+        template = REVIEW_PROMPT_TEMPLATE
     user_message = template.format(
         round=round_num,
         doc_type_name=doc_type_name,
@@ -1205,4 +1337,10 @@ def call_models_parallel(
         }
         for future in concurrent.futures.as_completed(future_to_model):
             results.append(future.result())
+
+    if preserve_intent:
+        for r in results:
+            if r.spec:
+                warn_dropped_headings(r.model, spec, r.spec)
+
     return results

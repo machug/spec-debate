@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import pytest
+
+import models
+from unittest.mock import MagicMock
 from models import (
     CostTracker,
     detect_agreement,
@@ -11,8 +14,13 @@ from models import (
     generate_diff,
     get_critique_summary,
     gpt5_tuning_params,
+    dropped_headings,
+    has_unterminated_fence,
     is_reasoning_model,
+    markdown_headings,
     should_warn_missing_spec,
+    strip_spec_block,
+    warn_dropped_headings,
 )
 from prompts import get_system_prompt
 
@@ -385,3 +393,312 @@ class TestReviewOnlyPrompt:
         # Even with a persona, review-only must apply the no-re-emit directive.
         prompt = get_system_prompt("tech", persona="security-engineer", review_only=True)
         assert "REVIEW-ONLY" in prompt
+
+
+# ---------------------------------------------------------------------------
+# get_system_prompt — press + review-only (spec-debate-294)
+# ---------------------------------------------------------------------------
+
+
+class TestPressReviewOnlyPrompt:
+    """--press must not be cancelled by the review-only system prompt."""
+
+    def test_press_review_only_does_not_forbid_extra_output(self):
+        # The plain reviewer suffix says "Nothing else", which cancels press.
+        plain = get_system_prompt("tech", review_only=True)
+        assert "Nothing else" in plain
+        pressed = get_system_prompt("tech", review_only=True, press=True)
+        assert "Nothing else" not in pressed
+
+    def test_press_review_only_demands_a_section_list(self):
+        pressed = get_system_prompt("tech", review_only=True, press=True)
+        lowered = pressed.lower()
+        assert "bare [agree] is not an acceptable answer" in lowered
+        assert "three named sections" in lowered
+
+    def test_press_review_only_still_forbids_reemitting_the_spec(self):
+        pressed = get_system_prompt("tech", review_only=True, press=True)
+        assert "REVIEW-ONLY" in pressed
+        assert "Do NOT use [SPEC] tags" in pressed
+
+    def test_press_without_review_only_is_unchanged(self):
+        assert get_system_prompt("tech", press=True) == get_system_prompt("tech")
+
+
+# ---------------------------------------------------------------------------
+# preserve-intent heading backstop (spec-debate-xp7)
+# ---------------------------------------------------------------------------
+
+
+EVIDENCE_SPEC = """# Warehouse Sync
+
+## Findings
+
+### F1
+
+## Decisions
+
+## Design
+"""
+
+
+class TestDroppedHeadings:
+    def test_identical_document_drops_nothing(self):
+        assert dropped_headings(EVIDENCE_SPEC, EVIDENCE_SPEC) == []
+
+    def test_added_sections_are_allowed(self):
+        revised = EVIDENCE_SPEC + "\n## Open Questions\n"
+        assert dropped_headings(EVIDENCE_SPEC, revised) == []
+
+    def test_generic_template_rewrite_is_reported(self):
+        # The observed failure: structure replaced wholesale, findings gone.
+        revised = "# Warehouse Sync\n\n## Overview\n\n## Goals\n\n## Non-Goals\n"
+        assert dropped_headings(EVIDENCE_SPEC, revised) == [
+            "Findings",
+            "Decisions",
+            "Design",
+        ]
+
+    def test_ignores_third_level_headings(self):
+        # F1 is an h3; only h1/h2 are tracked.
+        revised = "# Warehouse Sync\n\n## Findings\n\n## Decisions\n\n## Design\n"
+        assert dropped_headings(EVIDENCE_SPEC, revised) == []
+
+    def test_reports_each_dropped_heading_once(self):
+        original = "## Findings\n\n## Findings\n\n## Design\n"
+        assert dropped_headings(original, "## Design\n") == ["Findings"]
+
+    def test_warn_prints_to_stderr(self, capsys):
+        revised = "# Warehouse Sync\n\n## Overview\n"
+        missing = warn_dropped_headings("xai/grok-4.6", EVIDENCE_SPEC, revised)
+        assert missing == ["Findings", "Decisions", "Design"]
+        err = capsys.readouterr().err
+        assert "preserve-intent" in err
+        assert "Findings" in err
+
+    def test_warn_is_silent_when_nothing_dropped(self, capsys):
+        assert warn_dropped_headings("m", EVIDENCE_SPEC, EVIDENCE_SPEC) == []
+        assert capsys.readouterr().err == ""
+
+
+# ---------------------------------------------------------------------------
+# critique prose persistence (spec-debate-px2)
+# ---------------------------------------------------------------------------
+
+
+class TestStripSpecBlock:
+    def test_keeps_critique_and_drops_the_reemitted_document(self):
+        response = "1. Missing rate limits\n2. No retries\n\n[SPEC]\n# Doc\n[/SPEC]"
+        assert strip_spec_block(response) == "1. Missing rate limits\n2. No retries"
+
+    def test_response_without_spec_tags_is_kept_whole(self, sample_agree_response):
+        assert strip_spec_block(sample_agree_response) == sample_agree_response.strip()
+
+    def test_empty_response_stays_empty(self):
+        assert strip_spec_block("") == ""
+
+
+# ---------------------------------------------------------------------------
+# code-fence tracking (shared by the plan truncation check and heading diff)
+# ---------------------------------------------------------------------------
+
+
+class TestHasUnterminatedFence:
+    def test_balanced_fences_are_closed(self):
+        assert not has_unterminated_fence("# Doc\n\n```bash\nls\n```\n")
+
+    def test_open_fence_at_eof_is_detected(self):
+        assert has_unterminated_fence("# Doc\n\n```bash\nls\n")
+
+    def test_fence_inside_a_string_literal_does_not_count(self):
+        body = '# Doc\n\n```python\nx = "```"\n```\n'
+        assert body.count("```") % 2 == 1
+        assert not has_unterminated_fence(body)
+
+    def test_four_backticks_may_wrap_three(self):
+        assert not has_unterminated_fence("````md\n```sh\nls\n```\n````\n")
+
+    def test_tilde_fence_is_tracked(self):
+        assert has_unterminated_fence("~~~python\nx = 1\n")
+
+    def test_backticks_do_not_close_a_tilde_fence(self):
+        assert has_unterminated_fence("~~~python\nx = 1\n```\n")
+
+    def test_no_fences_at_all(self):
+        assert not has_unterminated_fence("# Doc\n\nJust prose.\n")
+
+
+# ---------------------------------------------------------------------------
+# heading extraction edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestMarkdownHeadings:
+    def test_hash_comments_inside_a_code_block_are_not_headings(self):
+        body = "# Real\n\n```bash\n# install deps\n## run it\nnpm i\n```\n\n## Also Real\n"
+        assert markdown_headings(body) == ["Real", "Also Real"]
+
+    def test_closed_atx_heading_normalizes(self):
+        assert markdown_headings("## Design ##\n") == ["Design"]
+
+    def test_setext_headings_are_found(self):
+        assert markdown_headings("Findings\n========\n\nDecisions\n---------\n") == [
+            "Findings",
+            "Decisions",
+        ]
+
+    def test_third_level_headings_are_ignored(self):
+        assert markdown_headings("### F1\n") == []
+
+    def test_indented_hash_beyond_three_spaces_is_not_a_heading(self):
+        assert markdown_headings("    # not a heading\n") == []
+
+
+class TestDroppedHeadingsFalsePositives:
+    def test_rewriting_only_a_code_block_reports_nothing(self):
+        original = "# Doc\n\n```bash\n# install deps\n```\n\n## Design\n"
+        revised = "# Doc\n\n```bash\n# install everything\n```\n\n## Design\n"
+        assert dropped_headings(original, revised) == []
+
+    def test_closing_hashes_are_not_a_dropped_heading(self):
+        assert dropped_headings("## Design ##\n", "## Design\n") == []
+
+
+# ---------------------------------------------------------------------------
+# strip_spec_block edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestStripSpecBlockEdgeCases:
+    def test_prose_mention_of_the_tag_does_not_eat_the_critique(self):
+        # The press prompt puts the literal "[SPEC]" in the user message, so
+        # models echo it. Splitting on the first occurrence loses everything.
+        response = (
+            "You asked for the doc between [SPEC] and [/SPEC] tags. My concerns:\n"
+            "1. No retry budget\n\n"
+            "[SPEC]\n# Doc\n[/SPEC]"
+        )
+        out = strip_spec_block(response)
+        assert "No retry budget" in out
+        assert "# Doc" not in out
+
+    def test_critique_after_the_closing_tag_survives(self):
+        response = "Before.\n[SPEC]\n# Doc\n[/SPEC]\nAfter: one more concern."
+        out = strip_spec_block(response)
+        assert "Before." in out
+        assert "After: one more concern." in out
+        assert "# Doc" not in out
+
+    def test_unclosed_spec_tag_is_cut_from_the_last_opening(self):
+        response = "Critique stands.\n\n[SPEC]\n# Half a doc that got cut off"
+        assert strip_spec_block(response) == "Critique stands."
+
+
+# ---------------------------------------------------------------------------
+# wiring: the fixes must actually be reached from the call path
+# ---------------------------------------------------------------------------
+
+
+class TestPressReachesTheSystemPrompt:
+    """Regression guard for the original bug: press never reached judge mode.
+
+    Testing get_system_prompt alone would not catch it — the v1.12.0 defect was
+    the call site dropping the argument, not the prompt text.
+    """
+
+    def _stub_response(self):
+        resp = MagicMock()
+        resp.choices = [MagicMock()]
+        resp.choices[0].message.content = "[AGREE]"
+        resp.choices[0].finish_reason = "stop"
+        resp.usage.prompt_tokens = 10
+        resp.usage.completion_tokens = 5
+        return resp
+
+    def _spy(self, monkeypatch):
+        seen = {}
+
+        def spy(doc_type, persona=None, review_only=False, press=False):
+            seen["review_only"] = review_only
+            seen["press"] = press
+            return "SYSTEM"
+
+        monkeypatch.setattr(models, "get_system_prompt", spy)
+        monkeypatch.setattr(
+            models, "completion", MagicMock(return_value=self._stub_response())
+        )
+        monkeypatch.setattr(models, "cost_tracker", MagicMock())
+        return seen
+
+    def test_press_and_review_only_both_reach_the_system_prompt(self, monkeypatch):
+        seen = self._spy(monkeypatch)
+        models.call_single_model(
+            "gpt-4o", "# Spec", 5, "tech", press=True, review_only=True
+        )
+        assert seen == {"review_only": True, "press": True}
+
+    def test_defaults_are_passed_through_unchanged(self, monkeypatch):
+        seen = self._spy(monkeypatch)
+        models.call_single_model("gpt-4o", "# Spec", 1, "tech")
+        assert seen == {"review_only": False, "press": False}
+
+    def test_pressed_judge_user_message_does_not_request_spec_tags(self, monkeypatch):
+        # The user message must not contradict the reviewer suffix.
+        mock = MagicMock(return_value=self._stub_response())
+        monkeypatch.setattr(models, "completion", mock)
+        monkeypatch.setattr(models, "cost_tracker", MagicMock())
+        models.call_single_model(
+            "gpt-4o", "# Spec", 5, "tech", press=True, review_only=True
+        )
+        user_message = mock.call_args.kwargs["messages"][1]["content"]
+        assert "between [SPEC] and [/SPEC] tags" not in user_message
+        assert "List at least 3 specific sections" in user_message
+
+    def test_pressed_editor_still_requests_spec_tags(self, monkeypatch):
+        # Without review_only the model IS the editor and must re-emit.
+        mock = MagicMock(return_value=self._stub_response())
+        monkeypatch.setattr(models, "completion", mock)
+        monkeypatch.setattr(models, "cost_tracker", MagicMock())
+        models.call_single_model("gpt-4o", "# Spec", 5, "tech", press=True)
+        user_message = mock.call_args.kwargs["messages"][1]["content"]
+        assert "between [SPEC] and [/SPEC] tags" in user_message
+
+
+class TestPreserveIntentBackstopIsWired:
+    """The heading diff must run from call_models_parallel, not just exist."""
+
+    def _result(self, spec):
+        return models.ModelResponse(
+            model="stub", response="critique", agreed=False, spec=spec
+        )
+
+    def test_warns_when_a_revision_drops_headings(self, monkeypatch, capsys):
+        monkeypatch.setattr(
+            models,
+            "call_single_model",
+            lambda *a, **k: self._result("# Doc\n\n## Overview\n"),
+        )
+        models.call_models_parallel(
+            ["stub"], "# Doc\n\n## Findings\n", 1, "tech", preserve_intent=True
+        )
+        assert "Findings" in capsys.readouterr().err
+
+    def test_silent_when_preserve_intent_is_off(self, monkeypatch, capsys):
+        monkeypatch.setattr(
+            models,
+            "call_single_model",
+            lambda *a, **k: self._result("# Doc\n\n## Overview\n"),
+        )
+        models.call_models_parallel(["stub"], "# Doc\n\n## Findings\n", 1, "tech")
+        assert "Findings" not in capsys.readouterr().err
+
+    def test_silent_when_the_model_agreed_without_re_emitting(
+        self, monkeypatch, capsys
+    ):
+        monkeypatch.setattr(
+            models, "call_single_model", lambda *a, **k: self._result(None)
+        )
+        models.call_models_parallel(
+            ["stub"], "# Doc\n\n## Findings\n", 1, "tech", preserve_intent=True
+        )
+        assert "Findings" not in capsys.readouterr().err

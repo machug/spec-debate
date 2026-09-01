@@ -90,7 +90,10 @@ from models import (  # noqa: E402
     generate_diff,
     get_critique_summary,
     is_reasoning_model,
+    has_unterminated_fence,
     load_context_files,
+    output_token_budget,
+    strip_spec_block,
     uses_max_completion_tokens,
 )
 from prompts import EMIT_PLAN_PROMPT, EXPORT_TASKS_PROMPT, get_doc_type_name  # noqa: E402
@@ -974,6 +977,54 @@ EMIT_PLAN_MAX_REASONING_TOKENS = 32000
 EMIT_PLAN_MAX_TOKENS = 16000
 EMIT_PLAN_TEMPERATURE = 0.2
 
+PLAN_TRUNCATION_MARKER = (
+    "<!-- TRUNCATED: {reason}.\n"
+    "     This plan is INCOMPLETE. Do not execute it as-is: its final tasks,\n"
+    "     verification section and task inventory may be missing. Re-run\n"
+    "     emit-plan with a narrower --pr-scope, or split the spec. -->\n\n"
+)
+
+
+CLEAN_FINISH_REASONS = frozenset(
+    {"stop", "end_turn", "eos", "complete", "completed", "tool_calls"}
+)
+
+
+def _finished_cleanly(finish_reason: Optional[str]) -> bool:
+    """True when the provider explicitly reported a normal end of generation."""
+    return str(finish_reason or "").lower() in CLEAN_FINISH_REASONS
+
+
+def plan_truncation_reason(
+    content: str,
+    finish_reason: Optional[str],
+    output_tokens: int,
+    budget: int,
+) -> Optional[str]:
+    """Return why an emitted plan looks incomplete, or None if it looks whole.
+
+    An emitted plan is fed straight to superpowers:executing-plans, so a plan cut
+    off mid-task is worse than no plan at all: the caller cannot see that the
+    tasks the PR existed to produce are simply absent.
+    """
+    if finish_reason == "length":
+        return (
+            f"model stopped at its {budget:,}-token output cap "
+            "(finish_reason=length)"
+        )
+    # Only trust the token count when the provider did NOT report a clean stop.
+    # Gemini reports hidden reasoning tokens inside completion_tokens while
+    # capping only visible output, so a complete plan can legitimately report
+    # tokens at or over the budget.
+    if output_tokens >= budget and not _finished_cleanly(finish_reason):
+        return (
+            f"model emitted {output_tokens:,} tokens, reaching its "
+            f"{budget:,}-token output cap"
+        )
+    if has_unterminated_fence(content):
+        return "the document ends inside an unterminated code block"
+    return None
+
 
 def detect_pr_labels(spec: str) -> list[str]:
     """Return sorted unique PR labels found in the spec (e.g. ['PR-1', 'PR-2']).
@@ -1097,11 +1148,14 @@ def handle_emit_plan(args: argparse.Namespace, models: list[str]) -> None:
         }
         # Moonshot/xAI reasoning models need max_tokens, not max_completion_tokens
         if uses_max_completion_tokens(models[0]):
-            completion_kwargs["max_completion_tokens"] = EMIT_PLAN_MAX_REASONING_TOKENS
+            budget = max(EMIT_PLAN_MAX_REASONING_TOKENS, output_token_budget(models[0]))
+            completion_kwargs["max_completion_tokens"] = budget
         elif is_reasoning_model(models[0]):
-            completion_kwargs["max_tokens"] = EMIT_PLAN_MAX_REASONING_TOKENS
+            budget = max(EMIT_PLAN_MAX_REASONING_TOKENS, output_token_budget(models[0]))
+            completion_kwargs["max_tokens"] = budget
         else:
-            completion_kwargs["max_tokens"] = EMIT_PLAN_MAX_TOKENS
+            budget = EMIT_PLAN_MAX_TOKENS
+            completion_kwargs["max_tokens"] = budget
             completion_kwargs["temperature"] = EMIT_PLAN_TEMPERATURE
 
         response = completion(**completion_kwargs)
@@ -1111,9 +1165,18 @@ def handle_emit_plan(args: argparse.Namespace, models: list[str]) -> None:
         output_tokens = response.usage.completion_tokens if response.usage else 0
         cost_tracker.add(models[0], input_tokens, output_tokens)
 
+        finish_reason = getattr(response.choices[0], "finish_reason", None)
+        truncation = plan_truncation_reason(
+            content, finish_reason, output_tokens, budget
+        )
+
+        body = content.strip() + "\n"
+        if truncation:
+            body = PLAN_TRUNCATION_MARKER.format(reason=truncation) + body
+
         out_p = Path(out_path)
         out_p.parent.mkdir(parents=True, exist_ok=True)
-        out_p.write_text(content.strip() + "\n", encoding="utf-8")
+        out_p.write_text(body, encoding="utf-8")
 
         print(f"\nPlan written: {out_path}", file=sys.stderr)
         print(f"  Label:  {pr_label}", file=sys.stderr)
@@ -1121,6 +1184,27 @@ def handle_emit_plan(args: argparse.Namespace, models: list[str]) -> None:
         print(f"  Size:   {len(content):,} chars", file=sys.stderr)
         print("", file=sys.stderr)
         print(cost_tracker.summary(), file=sys.stderr)
+
+        if truncation:
+            print(
+                f"\nError: the plan is TRUNCATED - {truncation}.\n"
+                f"  {out_path} was written with a TRUNCATED marker so you can "
+                "inspect it, but it is\n"
+                "  incomplete and must not be handed to executing-plans. Re-run "
+                "with a narrower\n"
+                "  --pr-scope, or split the spec across two emit-plan calls.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        if "Task inventory" not in content:
+            print(
+                "Warning: the plan has no 'Task inventory' section. The model may "
+                "have skipped it,\n"
+                "  or the trailing sections may be missing. Check the end of the "
+                "file before executing.",
+                file=sys.stderr,
+            )
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -1267,7 +1351,15 @@ def run_critique(
                 "round": args.round,
                 "all_agreed": all_agreed,
                 "models": [
-                    {"model": r.model, "agreed": r.agreed, "error": r.error}
+                    {
+                        "model": r.model,
+                        "agreed": r.agreed,
+                        "error": r.error,
+                        # The argument itself, minus any re-emitted [SPEC] copy
+                        # of the document. Without this the only record of what
+                        # a model said is whatever the caller kept from stdout.
+                        "critique": strip_spec_block(r.response),
+                    }
                     for r in results
                 ],
             }
