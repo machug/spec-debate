@@ -332,3 +332,118 @@ class TestHandleEmitPlanIntegration:
         with pytest.raises(SystemExit) as exc:
             handle_emit_plan(self._args(spec=str(spec_file)), ["claude-opus-4-6"])
         assert exc.value.code == 1
+
+
+# ---------------------------------------------------------------------------
+# emit-plan truncation detection (spec-debate-csi)
+# ---------------------------------------------------------------------------
+
+
+COMPLETE_PLAN = """# Feature — PR-1 implementation plan
+
+## Task 0: do the thing
+
+```python
+assert True
+```
+
+## Task inventory (for executing-plans batching)
+
+1. Task 0 — do the thing
+"""
+
+
+class TestPlanTruncationReason:
+    def test_complete_plan_is_not_truncated(self):
+        assert (
+            debate.plan_truncation_reason(COMPLETE_PLAN, "stop", 500, 16000) is None
+        )
+
+    def test_finish_reason_length_is_truncated(self):
+        reason = debate.plan_truncation_reason(COMPLETE_PLAN, "length", 500, 16000)
+        assert reason is not None
+        assert "finish_reason=length" in reason
+
+    def test_output_tokens_at_cap_is_truncated(self):
+        reason = debate.plan_truncation_reason(COMPLETE_PLAN, "stop", 32000, 32000)
+        assert reason is not None
+        assert "32,000" in reason
+
+    def test_unterminated_code_fence_is_truncated(self):
+        # The real-world shape: plan stops mid-string inside a test body.
+        cut = '# Plan\n\n```python\nassert manifest["prompt_hashes"]["c'
+        reason = debate.plan_truncation_reason(cut, "stop", 500, 16000)
+        assert reason is not None
+        assert "fences" in reason
+
+    def test_missing_finish_reason_is_not_truncated(self):
+        assert debate.plan_truncation_reason(COMPLETE_PLAN, None, 500, 16000) is None
+
+
+class TestHandleEmitPlanTruncation:
+    """handle_emit_plan must fail loudly rather than write half a plan."""
+
+    def _response(self, content, completion_tokens=500, finish_reason="stop"):
+        resp = MagicMock()
+        resp.choices = [MagicMock()]
+        resp.choices[0].message.content = content
+        resp.choices[0].finish_reason = finish_reason
+        resp.usage.prompt_tokens = 100
+        resp.usage.completion_tokens = completion_tokens
+        return resp
+
+    def _run(self, tmp_path, monkeypatch, response):
+        spec_file = tmp_path / "spec.md"
+        spec_file.write_text("# Spec\n\nPR-1 stuff.")
+        monkeypatch.setattr(debate, "completion", MagicMock(return_value=response))
+        monkeypatch.setattr(debate, "cost_tracker", MagicMock())
+        monkeypatch.setattr(debate, "is_reasoning_model", lambda m: False)
+        out = tmp_path / "plan.md"
+        args = argparse.Namespace(
+            spec=str(spec_file),
+            pr_label="PR-1",
+            pr_scope=None,
+            title_hint="",
+            plan_out=str(out),
+        )
+        handle_emit_plan(args, ["claude-opus-4-6"])
+        return out
+
+    def test_complete_plan_exits_zero_and_has_no_marker(self, tmp_path, monkeypatch):
+        out = self._run(tmp_path, monkeypatch, self._response(COMPLETE_PLAN))
+        assert "TRUNCATED" not in out.read_text()
+
+    def test_truncated_plan_exits_non_zero(self, tmp_path, monkeypatch):
+        with pytest.raises(SystemExit) as exc:
+            self._run(
+                tmp_path,
+                monkeypatch,
+                self._response(COMPLETE_PLAN, finish_reason="length"),
+            )
+        assert exc.value.code == 1
+
+    def test_truncated_plan_is_written_with_a_marker(self, tmp_path, monkeypatch):
+        out = tmp_path / "plan.md"
+        with pytest.raises(SystemExit):
+            self._run(
+                tmp_path,
+                monkeypatch,
+                self._response(COMPLETE_PLAN, finish_reason="length"),
+            )
+        body = out.read_text()
+        assert body.startswith("<!-- TRUNCATED:")
+        assert "Do not execute it as-is" in body
+
+    def test_output_tokens_at_cap_exits_non_zero(self, tmp_path, monkeypatch):
+        # The reproduced failure: 32,000 out, exactly the cap, finish_reason absent.
+        with pytest.raises(SystemExit) as exc:
+            self._run(
+                tmp_path,
+                monkeypatch,
+                self._response(
+                    COMPLETE_PLAN,
+                    completion_tokens=debate.EMIT_PLAN_MAX_TOKENS,
+                    finish_reason=None,
+                ),
+            )
+        assert exc.value.code == 1

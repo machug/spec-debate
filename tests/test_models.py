@@ -11,8 +11,11 @@ from models import (
     generate_diff,
     get_critique_summary,
     gpt5_tuning_params,
+    dropped_headings,
     is_reasoning_model,
     should_warn_missing_spec,
+    strip_spec_block,
+    warn_dropped_headings,
 )
 from prompts import get_system_prompt
 
@@ -385,3 +388,106 @@ class TestReviewOnlyPrompt:
         # Even with a persona, review-only must apply the no-re-emit directive.
         prompt = get_system_prompt("tech", persona="security-engineer", review_only=True)
         assert "REVIEW-ONLY" in prompt
+
+
+# ---------------------------------------------------------------------------
+# get_system_prompt — press + review-only (spec-debate-294)
+# ---------------------------------------------------------------------------
+
+
+class TestPressReviewOnlyPrompt:
+    """--press must not be cancelled by the review-only system prompt."""
+
+    def test_press_review_only_does_not_forbid_extra_output(self):
+        # The plain reviewer suffix says "Nothing else", which cancels press.
+        plain = get_system_prompt("tech", review_only=True)
+        assert "Nothing else" in plain
+        pressed = get_system_prompt("tech", review_only=True, press=True)
+        assert "Nothing else" not in pressed
+
+    def test_press_review_only_demands_a_section_list(self):
+        pressed = get_system_prompt("tech", review_only=True, press=True)
+        lowered = pressed.lower()
+        assert "bare [agree] is not an acceptable answer" in lowered
+        assert "three named sections" in lowered
+
+    def test_press_review_only_still_forbids_reemitting_the_spec(self):
+        pressed = get_system_prompt("tech", review_only=True, press=True)
+        assert "REVIEW-ONLY" in pressed
+        assert "Do NOT use [SPEC] tags" in pressed
+
+    def test_press_without_review_only_is_unchanged(self):
+        assert get_system_prompt("tech", press=True) == get_system_prompt("tech")
+
+
+# ---------------------------------------------------------------------------
+# preserve-intent heading backstop (spec-debate-xp7)
+# ---------------------------------------------------------------------------
+
+
+EVIDENCE_SPEC = """# Warehouse Sync
+
+## Findings
+
+### F1
+
+## Decisions
+
+## Design
+"""
+
+
+class TestDroppedHeadings:
+    def test_identical_document_drops_nothing(self):
+        assert dropped_headings(EVIDENCE_SPEC, EVIDENCE_SPEC) == []
+
+    def test_added_sections_are_allowed(self):
+        revised = EVIDENCE_SPEC + "\n## Open Questions\n"
+        assert dropped_headings(EVIDENCE_SPEC, revised) == []
+
+    def test_generic_template_rewrite_is_reported(self):
+        # The observed failure: structure replaced wholesale, findings gone.
+        revised = "# Warehouse Sync\n\n## Overview\n\n## Goals\n\n## Non-Goals\n"
+        assert dropped_headings(EVIDENCE_SPEC, revised) == [
+            "Findings",
+            "Decisions",
+            "Design",
+        ]
+
+    def test_ignores_third_level_headings(self):
+        # F1 is an h3; only h1/h2 are tracked.
+        revised = "# Warehouse Sync\n\n## Findings\n\n## Decisions\n\n## Design\n"
+        assert dropped_headings(EVIDENCE_SPEC, revised) == []
+
+    def test_reports_each_dropped_heading_once(self):
+        original = "## Findings\n\n## Findings\n\n## Design\n"
+        assert dropped_headings(original, "## Design\n") == ["Findings"]
+
+    def test_warn_prints_to_stderr(self, capsys):
+        revised = "# Warehouse Sync\n\n## Overview\n"
+        missing = warn_dropped_headings("xai/grok-4.6", EVIDENCE_SPEC, revised)
+        assert missing == ["Findings", "Decisions", "Design"]
+        err = capsys.readouterr().err
+        assert "preserve-intent" in err
+        assert "Findings" in err
+
+    def test_warn_is_silent_when_nothing_dropped(self, capsys):
+        assert warn_dropped_headings("m", EVIDENCE_SPEC, EVIDENCE_SPEC) == []
+        assert capsys.readouterr().err == ""
+
+
+# ---------------------------------------------------------------------------
+# critique prose persistence (spec-debate-px2)
+# ---------------------------------------------------------------------------
+
+
+class TestStripSpecBlock:
+    def test_keeps_critique_and_drops_the_reemitted_document(self):
+        response = "1. Missing rate limits\n2. No retries\n\n[SPEC]\n# Doc\n[/SPEC]"
+        assert strip_spec_block(response) == "1. Missing rate limits\n2. No retries"
+
+    def test_response_without_spec_tags_is_kept_whole(self, sample_agree_response):
+        assert strip_spec_block(sample_agree_response) == sample_agree_response.strip()
+
+    def test_empty_response_stays_empty(self):
+        assert strip_spec_block("") == ""

@@ -25,6 +25,17 @@ This document represents deliberate design choices. Before suggesting ANY remova
 
 5. Your critique should ADD protective detail, not sand off distinctive choices.
 
+6. PRESERVE THE DOCUMENT'S STRUCTURE. This is not optional and it is not covered
+   by the rules above. Reproduce EVERY top-level (#) and second-level (##)
+   heading that appears in the input, with the same wording, in the same order.
+   You may ADD sections. You may NEVER delete, rename, reorder or merge an
+   existing section, and you may NEVER replace the document's structure with a
+   generic template (Overview / Goals / Non-Goals / Architecture / ...). A
+   document organised around evidence, findings, or decisions is organised that
+   way on purpose. If you believe a section should be removed, list it under a
+   "REMOVALS PROPOSED" heading in your critique and leave the section itself
+   intact in the document you emit.
+
 Treat removal like a code review: additions are cheap, deletions require justification.
 """
 
@@ -406,8 +417,36 @@ portions of the document. Keep your response tight — a verdict and, if needed,
 a focused critique the author can act on."""
 
 
+REVIEWER_PRESS_SUFFIX = """
+
+**REVIEW-ONLY MODE — DO NOT REPRODUCE THE SPEC.**
+You are acting as a final reviewer/judge, not an editor. The full document is
+already held by the author. Your job is a verdict, not a rewrite.
+
+**THIS IS A PRESS ROUND. A bare [AGREE] is NOT an acceptable answer.** You have
+already agreed once. An agreement with no supporting review carries no
+information, and one that skips the checklist below will be treated as a
+protocol violation rather than a verdict.
+
+- If the document is production-ready you must still show your work. Output, in
+  this order:
+  1. At least THREE named sections you reviewed, and what you verified in each.
+  2. Why the document is complete and production-ready.
+  3. Any remaining concerns, however minor — stylistic and optional ones count.
+  4. [AGREE] on its own line, last.
+- If it is NOT production-ready: output a short numbered critique of blocking
+  issues only (most important first). Be specific and reference sections.
+  Do not output [AGREE].
+
+Do NOT output the document. Do NOT use [SPEC] tags. Do NOT restate large
+portions of the document."""
+
+
 def get_system_prompt(
-    doc_type: str, persona: Optional[str] = None, review_only: bool = False
+    doc_type: str,
+    persona: Optional[str] = None,
+    review_only: bool = False,
+    press: bool = False,
 ) -> str:
     """Get the system prompt for a given document type and optional persona.
 
@@ -415,10 +454,17 @@ def get_system_prompt(
     reviewer/judge: emit [AGREE] or a short critique, and never re-emit the
     spec. This lets deep reasoners (gpt-5.5-pro) and Opus gate acceptance
     without exhausting their output budget re-typing a long document.
+
+    When press is also True the plain reviewer suffix would cancel the press
+    round: it tells the model to answer with [AGREE] and "Nothing else", while
+    PRESS_PROMPT_TEMPLATE in the user message asks for a section-by-section
+    verification. The system prompt wins, so a pressed judge returned a bare
+    [AGREE] and the anti-laziness check did nothing. Use the press-aware suffix
+    instead, which keeps judge mode but requires the verification.
     """
     if review_only:
         base = _base_system_prompt(doc_type, persona)
-        return base + REVIEWER_SUFFIX
+        return base + (REVIEWER_PRESS_SUFFIX if press else REVIEWER_SUFFIX)
 
     return _base_system_prompt(doc_type, persona)
 

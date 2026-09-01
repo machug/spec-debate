@@ -345,6 +345,54 @@ def extract_spec(response: str) -> Optional[str]:
     return response[start:end].strip()
 
 
+def strip_spec_block(response: str) -> str:
+    """Return the model's critique prose with any re-emitted [SPEC] block removed.
+
+    This is the part of a response worth persisting: the argument, not the copy
+    of the document the caller already holds.
+    """
+    return response.split("[SPEC]", 1)[0].strip()
+
+
+def markdown_headings(text: str) -> list[str]:
+    """Top-level (#) and second-level (##) headings, in document order."""
+    return [
+        re.sub(r"\s+", " ", m.group(1)).strip()
+        for m in re.finditer(r"^#{1,2}[ \t]+(.+?)[ \t]*$", text, re.MULTILINE)
+    ]
+
+
+def dropped_headings(original: str, revised: str) -> list[str]:
+    """Headings present in `original` but missing from `revised`, in order.
+
+    Mechanical backstop for --preserve-intent: a model can obey every wording
+    rule in PRESERVE_INTENT_PROMPT and still swap the document's whole skeleton
+    for a generic template, taking the evidence sections with it.
+    """
+    kept = set(markdown_headings(revised))
+    seen: set[str] = set()
+    missing = []
+    for h in markdown_headings(original):
+        if h not in kept and h not in seen:
+            seen.add(h)
+            missing.append(h)
+    return missing
+
+
+def warn_dropped_headings(model: str, original: str, revised: str) -> list[str]:
+    """Print a warning naming headings the revision dropped. Returns them."""
+    missing = dropped_headings(original, revised)
+    if missing:
+        shown = ", ".join(missing[:5])
+        more = f" (+{len(missing) - 5} more)" if len(missing) > 5 else ""
+        print(
+            f"Warning: {model} dropped {len(missing)} heading(s) from the input "
+            f"despite --preserve-intent: {shown}{more}",
+            file=sys.stderr,
+        )
+    return missing
+
+
 def extract_tasks(response: str) -> list[dict]:
     """Extract tasks from export-tasks response."""
     tasks = []
@@ -982,7 +1030,7 @@ def call_single_model(
         if not model.startswith("bedrock/"):
             actual_model = f"bedrock/{model}"
 
-    system_prompt = get_system_prompt(doc_type, persona, review_only)
+    system_prompt = get_system_prompt(doc_type, persona, review_only, press)
     doc_type_name = get_doc_type_name(doc_type)
 
     focus_section = ""
@@ -1205,4 +1253,10 @@ def call_models_parallel(
         }
         for future in concurrent.futures.as_completed(future_to_model):
             results.append(future.result())
+
+    if preserve_intent:
+        for r in results:
+            if r.spec:
+                warn_dropped_headings(r.model, spec, r.spec)
+
     return results

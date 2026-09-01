@@ -32,7 +32,7 @@ allowed-tools: Bash, Read, Write, Edit, Agent, AskUserQuestion, WebFetch, WebSea
           ║                                                  ║
           ║  Skill.......: spec-debate                       ║
           ║  Author......: machug          (hughtec.com)     ║
-          ║  Version.....: 1.12.0                            ║
+          ║  Version.....: 1.13.0                            ║
           ║  Origin......: fork of zscole/adversarial-spec   ║
           ║  Released....: 2026                              ║
           ║  License.....: MIT                               ║
@@ -1082,6 +1082,8 @@ done
 Output:
 - Default path: sibling of the spec with `-<pr-label>.plan.md` appended (stripping `.spec-debate-final` / `.spec` from the stem).
 - Override with `--plan-out <path>`.
+
+**Truncation is a hard failure.** A large spec can push the plan past the model's output cap, and a plan cut off mid-task is worse than no plan: its final tasks, verification section and task inventory are simply absent, and `executing-plans` cannot tell. `emit-plan` now detects this (`finish_reason=length`, output tokens at the cap, or an odd number of ``` fences), writes the file with a `<!-- TRUNCATED: ... -->` header so you can inspect it, and **exits 1**. Treat exit 1 from `emit-plan` as "do not execute this plan" — re-run with a narrower `--pr-scope`, or split the spec across two calls. It also warns (exit 0) if the plan has no `Task inventory` section.
 
 When to use:
 - After the spec converges (Step 9 of the process).
