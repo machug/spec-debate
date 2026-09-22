@@ -5,7 +5,7 @@ Sends specs to multiple LLMs for critique using LiteLLM.
 
 Usage:
     echo "spec" | python3 debate.py critique --models gpt-5.5
-    echo "spec" | python3 debate.py critique --models gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.3 --doc-type prd
+    echo "spec" | python3 debate.py critique --models gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.7 --doc-type prd
     echo "spec" | python3 debate.py critique --models codex/gpt-5.6-sol,gemini/gemini-3.1-pro-preview --doc-type tech
     echo "spec" | python3 debate.py critique --models gpt-5.5 --focus security
     echo "spec" | python3 debate.py critique --models gpt-5.5 --persona "security engineer"
@@ -21,15 +21,15 @@ Usage:
     python3 debate.py sessions
 
 Supported providers (set corresponding API key):
-    OpenAI:     OPENAI_API_KEY       models: gpt-5.5, gpt-5.5-pro, gpt-5.4-mini, o3-pro, o4-mini, etc.
-    Anthropic:  ANTHROPIC_API_KEY    models: claude-fable-5, claude-opus-5, claude-sonnet-5, claude-haiku-4-5, etc.
-    Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-3.5-flash, gemini/gemini-2.5-pro, etc.
-    xAI:        XAI_API_KEY          models: xai/grok-4.3, xai/grok-4.20-0309-reasoning, xai/grok-4.20-0309-non-reasoning, etc.
+    OpenAI:     OPENAI_API_KEY       models: gpt-6-astra, gpt-5.6-sol, gpt-5.5, gpt-5.5-pro, etc.
+    Anthropic:  ANTHROPIC_API_KEY    models: claude-fable-5-1, claude-opus-5, claude-sonnet-5, claude-haiku-4-5, etc.
+    Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-3.8-flash, gemini/gemini-2.5-pro, etc.
+    xAI:        XAI_API_KEY          models: xai/grok-4.7, xai/grok-4.6, xai/grok-4.20-0309-reasoning, etc.
     Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-7, foundry/grok-4, foundry/Phi-4-reasoning, etc.
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
     Groq:       GROQ_API_KEY         models: groq/llama-3.3-70b, etc.
     OpenRouter: OPENROUTER_API_KEY   models: openrouter/openai/gpt-5.5-pro, openrouter/anthropic/claude-opus-4.7, etc.
-    Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, etc.
+    Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-v4-pro, deepseek/deepseek-flash, etc.
     ZAI (GLM):  ZAI_API_KEY          models: zai/glm-5.1, zai/glm-5-turbo, zai/glm-5, etc.
     Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.6, moonshot/kimi-k2.5, etc.
     Codex CLI:  (ChatGPT subscription) models: codex/gpt-5.6-sol, codex/gpt-5.6-terra, codex/gpt-5.5
@@ -37,7 +37,7 @@ Supported providers (set corresponding API key):
                 Reasoning: --codex-reasoning xhigh (minimal, low, medium, high, xhigh)
                 Note: ChatGPT-account auth serves only the ChatGPT lineup; other
                 models (gpt-5.3-codex, gpt-5.5-pro) need API-key auth
-    Antigravity: (Google account)      models: antigravity/gemini-3.6-flash-high, antigravity/gemini-3.1-pro-high
+    Antigravity: (Google account)      models: antigravity/gemini-3.8-flash-high, antigravity/gemini-3.1-pro-high
                 Install: curl -fsSL https://antigravity.google/cli/install.sh | bash
                 Auth: run `agy` once interactively; `agy models` lists slugs
 
@@ -252,7 +252,7 @@ def add_core_arguments(parser: argparse.ArgumentParser) -> None:
         "--models",
         "-m",
         default=None,
-        help="Comma-separated list of models (e.g., gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.3)",
+        help="Comma-separated list of models (e.g., gpt-5.5,gemini/gemini-3.1-pro-preview,xai/grok-4.7)",
     )
     parser.add_argument(
         "--doc-type",
@@ -795,7 +795,7 @@ def parse_models(args: argparse.Namespace) -> list[str]:
             )
             print("\nAvailable providers:", file=sys.stderr)
             print(
-                "  OpenAI:    Set OPENAI_API_KEY for gpt-5.5, gpt-5.5-pro, o3, etc.", file=sys.stderr
+                "  OpenAI:    Set OPENAI_API_KEY for gpt-6-astra, gpt-5.6-sol, gpt-5.5-pro, etc.", file=sys.stderr
             )
             print(
                 "  Anthropic: Set ANTHROPIC_API_KEY for claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5, etc.",
@@ -805,7 +805,7 @@ def parse_models(args: argparse.Namespace) -> list[str]:
                 "  Google:    Set GEMINI_API_KEY for gemini/gemini-3.1-pro-preview, etc.",
                 file=sys.stderr,
             )
-            print("  xAI:       Set XAI_API_KEY for xai/grok-4.3, xai/grok-4.20-0309-reasoning, etc.", file=sys.stderr)
+            print("  xAI:       Set XAI_API_KEY for xai/grok-4.7, xai/grok-4.6, etc.", file=sys.stderr)
             print("  Azure AI:  Set AZURE_AI_API_KEY for foundry/claude-opus-4-7, etc.", file=sys.stderr)
             print(
                 "  Mistral:   Set MISTRAL_API_KEY for mistral/mistral-large, etc.",
@@ -816,7 +816,7 @@ def parse_models(args: argparse.Namespace) -> list[str]:
                 file=sys.stderr,
             )
             print(
-                "  Deepseek:  Set DEEPSEEK_API_KEY for deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash, etc.",
+                "  Deepseek:  Set DEEPSEEK_API_KEY for deepseek/deepseek-v4-pro, deepseek/deepseek-flash, etc.",
                 file=sys.stderr,
             )
             print("  ZAI (GLM): Set ZAI_API_KEY for zai/glm-5, zai/glm-4.7, etc.", file=sys.stderr)
