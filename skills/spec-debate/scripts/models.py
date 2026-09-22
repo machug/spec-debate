@@ -205,9 +205,10 @@ def gpt5_tuning_params(model: str) -> dict:
     model_lower = model.lower()
     if "gpt-6" in model_lower:
         # gpt-6-astra (verified 2026-09-22): chat completions reject the
-        # `text.verbosity` block ("Unknown parameter: 'text'"), and litellm's
-        # param map does not yet list reasoning_effort for it, so pass effort
-        # through extra_body untouched.
+        # `text.verbosity` block ("Unknown parameter: 'text'"), and litellm
+        # 1.98 (the requirements.txt floor) does not list reasoning_effort for
+        # it (1.102 does), so pass effort through extra_body, which works on
+        # both.
         return {"extra_body": {"reasoning_effort": "medium"}}
     if "gpt-5" not in model_lower:
         return {}
