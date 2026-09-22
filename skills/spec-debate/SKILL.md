@@ -999,7 +999,8 @@ the reviewer gate.
 
 **Why this is the right split:** in-loop debaters now also get real output
 controls — for GPT-5 models the skill sets `verbosity=low` and (non-pro)
-`reasoning_effort=medium` so reasoning + full re-emit fit the budget. Pro keeps
+`reasoning_effort=medium` so reasoning + full re-emit fit the budget (GPT-6
+Astra rejects `verbosity`, so it gets only `reasoning_effort=medium`). Pro keeps
 its deep reasoning and is used where it shines: judging, not re-typing.
 
 **Use when:**

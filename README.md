@@ -115,9 +115,11 @@ Run `python3 debate.py discover-models` to query provider APIs for the latest av
 
 Two Anthropic-specific rules apply automatically. You do not need to configure either one.
 
-**Temperature.** Claude Opus 4.7 and newer — including Claude Opus 5, Sonnet 5, and Fable 5 — accept only `temperature=1`. `debate.py` detects these models and omits the parameter. Claude Sonnet 4.6, Opus 4.6, and Haiku 4.5 still accept a temperature and keep the existing behavior.
+**Temperature.** Claude Opus 4.7 and newer — including Claude Opus 5, Sonnet 5, Fable 5, and Fable 5.1 — accept only `temperature=1`. `debate.py` detects these models and omits the parameter. Claude Sonnet 4.6, Opus 4.6, and Haiku 4.5 still accept a temperature and keep the existing behavior.
 
 **Effort.** Claude models from the 4.6 generation up — Sonnet 4.6, Opus 4.6, and every 4.7, 4.8, and 5 model — support Anthropic's `effort` control and default to `high`. On a full spec re-emit, `high` is slow and expensive, so `debate.py` runs in-loop debaters at `low`. Judges in `--review-only` keep the `high` default, because they emit `[AGREE]` or a short critique and never re-emit the spec.
+
+**GPT-6.** `gpt-6-astra` also rejects any temperature but 1, needs `max_completion_tokens`, and does not accept the GPT-5 `text.verbosity` control. `debate.py` handles all three and sends `reasoning_effort=medium` to in-loop debaters. Defaults stay on `gpt-5.6-sol`; Astra is $10/$50 per 1M and plan-gated on the Codex route.
 
 Measured on Claude Opus 5 with one technical-specification critique, 2026-08-31:
 
