@@ -663,7 +663,7 @@ def discover_models() -> dict[str, list[str]]:
                 for m in data["data"]
                 if any(
                     k in m["id"]
-                    for k in ("gpt-4.1", "gpt-5", "o1", "o3", "o4")
+                    for k in ("gpt-4.1", "gpt-5", "gpt-6", "o1", "o3", "o4")
                 )
                 and not any(
                     k in m["id"]

@@ -53,3 +53,19 @@ def test_gpt6_tuning_skips_verbosity():
     # gpt-6-astra rejects text.verbosity; effort goes through extra_body
     assert models.gpt5_tuning_params("gpt-6-astra") == {"extra_body": {"reasoning_effort": "medium"}}
     assert "text" in models.gpt5_tuning_params("gpt-5.6-sol")["extra_body"]
+
+
+def test_discover_models_openai_includes_gpt6(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    for var in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "XAI_API_KEY", "ZAI_API_KEY",
+                "MISTRAL_API_KEY", "GROQ_API_KEY", "DEEPSEEK_API_KEY",
+                "MOONSHOT_API_KEY", "MINIMAX_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setattr(providers, "ANTIGRAVITY_AVAILABLE", False)
+    body = json.dumps({"data": [
+        {"id": "gpt-6-astra"}, {"id": "gpt-5.6-sol"}, {"id": "gpt-6-astra-realtime"}, {"id": "dall-e-3"},
+    ]})
+
+    with patch("urllib.request.urlopen", lambda req, timeout=10: io.BytesIO(body.encode())):
+        result = providers.discover_models()
+    assert result["OpenAI"] == ["gpt-5.6-sol", "gpt-6-astra"]
