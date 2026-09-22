@@ -82,6 +82,7 @@ DEFAULT_CLAUDE_EFFORT = "low"
 # API key). Rotates with OpenAI's ChatGPT lineup — see
 # https://developers.openai.com/codex/models. Last verified 2026-09-22.
 CODEX_CHATGPT_MODELS = {
+    "gpt-6-astra",  # rolling out to Pro, Business ($100) and Enterprise plans
     "gpt-5.6-sol",
     "gpt-5.6-terra",
     "gpt-5.6-luna",
@@ -126,7 +127,7 @@ def warn_codex_chatgpt_model_support(models: list[str]) -> None:
         print(
             f"Warning: Codex CLI is authenticated with a ChatGPT account, which "
             f"likely rejects: {', '.join(unsupported)}. ChatGPT-account models "
-            f"(as of 2026-09-22): gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5 (until 2026-10-14). "
+            f"(as of 2026-09-22): gpt-6-astra (eligible plans), gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5 (until 2026-10-14). "
             f"Other models need Codex API-key auth or the OPENAI_API_KEY route.\n",
             file=sys.stderr,
         )
@@ -361,7 +362,7 @@ def list_providers():
         print("-" * 60 + "\n")
 
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5, gpt-5.5-pro"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-6-astra, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5, gpt-5.5-pro"),
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
@@ -405,8 +406,8 @@ def list_providers():
     print(f"  {'Codex CLI':12} {'(ChatGPT subscription)':24} {codex_status}")
     if auth_mode:
         print(f"             Auth mode: {auth_mode}")
-    print("             Example models: codex/gpt-5.6-sol, codex/gpt-5.6-terra, codex/gpt-5.5")
-    print("             Note: ChatGPT-account auth serves only the ChatGPT lineup (gpt-5.6-sol/terra/luna,")
+    print("             Example models: codex/gpt-6-astra, codex/gpt-5.6-sol, codex/gpt-5.6-terra, codex/gpt-5.5")
+    print("             Note: ChatGPT-account auth serves only the ChatGPT lineup (gpt-6-astra on eligible plans, gpt-5.6-sol/terra/luna,")
     print("                   gpt-5.5 until 2026-10-14). gpt-5.3-codex and gpt-5.5-pro need API-key auth or OPENAI_API_KEY.")
     print(
         "             Reasoning: --codex-reasoning (minimal, low, medium, high, xhigh)"

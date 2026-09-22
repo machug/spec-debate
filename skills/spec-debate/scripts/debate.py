@@ -21,7 +21,7 @@ Usage:
     python3 debate.py sessions
 
 Supported providers (set corresponding API key):
-    OpenAI:     OPENAI_API_KEY       models: gpt-5.5, gpt-5.5-pro, gpt-5.4-mini, o3-pro, o4-mini, etc.
+    OpenAI:     OPENAI_API_KEY       models: gpt-6-astra, gpt-5.6-sol, gpt-5.5, gpt-5.5-pro, etc.
     Anthropic:  ANTHROPIC_API_KEY    models: claude-fable-5-1, claude-opus-5, claude-sonnet-5, claude-haiku-4-5, etc.
     Google:     GEMINI_API_KEY       models: gemini/gemini-3.1-pro-preview, gemini/gemini-3.8-flash, gemini/gemini-2.5-pro, etc.
     xAI:        XAI_API_KEY          models: xai/grok-4.7, xai/grok-4.6, xai/grok-4.20-0309-reasoning, etc.
@@ -795,7 +795,7 @@ def parse_models(args: argparse.Namespace) -> list[str]:
             )
             print("\nAvailable providers:", file=sys.stderr)
             print(
-                "  OpenAI:    Set OPENAI_API_KEY for gpt-5.5, gpt-5.5-pro, o3, etc.", file=sys.stderr
+                "  OpenAI:    Set OPENAI_API_KEY for gpt-6-astra, gpt-5.6-sol, gpt-5.5-pro, etc.", file=sys.stderr
             )
             print(
                 "  Anthropic: Set ANTHROPIC_API_KEY for claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5, etc.",

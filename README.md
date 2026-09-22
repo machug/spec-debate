@@ -89,7 +89,7 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 
 | Provider | Env Var | Example Models |
 |----------|---------|----------------|
-| OpenAI | `OPENAI_API_KEY` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro` |
+| OpenAI | `OPENAI_API_KEY` | `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro` |
 | Anthropic | `ANTHROPIC_API_KEY` | `claude-fable-5-1`, `claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`, `claude-opus-4-8`, `claude-haiku-4-5` |
 | Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.8-flash`, `gemini/gemini-3.7-flash` |
 | xAI | `XAI_API_KEY` | `xai/grok-4.7`, `xai/grok-4.6`, `xai/grok-4.5` |
@@ -101,7 +101,7 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 | ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5.3`, `zai/glm-5.3-flash`, `zai/glm-5.2` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
 | MiniMax | `MINIMAX_API_KEY` | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
-| Codex CLI | ChatGPT subscription | `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.5` (ChatGPT-account auth serves only the ChatGPT lineup; `gpt-5.5` retires from it 2026-10-14) |
+| Codex CLI | ChatGPT subscription | `codex/gpt-6-astra` (eligible plans), `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.5` (ChatGPT-account auth serves only the ChatGPT lineup; `gpt-5.5` retires from it 2026-10-14) |
 | Antigravity CLI | Google account | `antigravity/gemini-3.8-flash-high`, `antigravity/gemini-3.1-pro-high` (`agy models` lists all) |
 | Gemini CLI | RETIRED 2026-06-18 | Consumer service ended — use `antigravity/` or `gemini/` instead |
 

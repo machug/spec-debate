@@ -40,3 +40,16 @@ def test_discover_models_anthropic_is_live(monkeypatch):
     with patch("urllib.request.urlopen", fake_urlopen):
         result = providers.discover_models()
     assert result["Anthropic"] == ["claude-fable-5-1", "claude-opus-5"]
+
+
+def test_gpt6_astra_is_reasoning_model():
+    assert models.is_reasoning_model("gpt-6-astra")
+    assert models.uses_max_completion_tokens("gpt-6-astra")
+    assert models.is_reasoning_model("codex/gpt-6-astra")
+    assert "gpt-6-astra" in providers.CODEX_CHATGPT_MODELS
+
+
+def test_gpt6_tuning_skips_verbosity():
+    # gpt-6-astra rejects text.verbosity; effort goes through extra_body
+    assert models.gpt5_tuning_params("gpt-6-astra") == {"extra_body": {"reasoning_effort": "medium"}}
+    assert "text" in models.gpt5_tuning_params("gpt-5.6-sol")["extra_body"]
