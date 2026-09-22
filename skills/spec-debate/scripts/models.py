@@ -74,7 +74,7 @@ NON_RETRYABLE_PATTERNS = (
 
 CODEX_CHATGPT_HINT = (
     "Codex is authenticated with a ChatGPT account, which only serves: "
-    "gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5 "
+    "gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5 (until 2026-10-14) "
     "(gpt-5.3-codex-spark needs ChatGPT Pro; gpt-5.4/-mini retired 2026-08-31). "
     "For other models authenticate Codex with an API key or use the "
     "OPENAI_API_KEY litellm route (e.g. --models gpt-5.5-pro)."

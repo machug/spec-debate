@@ -80,12 +80,12 @@ DEFAULT_CLAUDE_EFFORT = "low"
 
 # Models Codex CLI serves when authenticated with a ChatGPT account (not an
 # API key). Rotates with OpenAI's ChatGPT lineup — see
-# https://developers.openai.com/codex/models. Last verified 2026-08-31.
+# https://developers.openai.com/codex/models. Last verified 2026-09-22.
 CODEX_CHATGPT_MODELS = {
     "gpt-5.6-sol",
     "gpt-5.6-terra",
     "gpt-5.6-luna",
-    "gpt-5.5",
+    "gpt-5.5",  # retires from ChatGPT-account Codex 2026-10-14
     "gpt-5.3-codex-spark",  # ChatGPT Pro only
 }
 
@@ -126,7 +126,7 @@ def warn_codex_chatgpt_model_support(models: list[str]) -> None:
         print(
             f"Warning: Codex CLI is authenticated with a ChatGPT account, which "
             f"likely rejects: {', '.join(unsupported)}. ChatGPT-account models "
-            f"(as of 2026-08-31): gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5. "
+            f"(as of 2026-09-22): gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5 (until 2026-10-14). "
             f"Other models need Codex API-key auth or the OPENAI_API_KEY route.\n",
             file=sys.stderr,
         )
@@ -365,10 +365,10 @@ def list_providers():
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
-            "claude-fable-5, claude-opus-5, claude-sonnet-5, claude-opus-4-8, claude-haiku-4-5",
+            "claude-fable-5-1, claude-opus-5, claude-sonnet-5, claude-fable-5, claude-opus-4-8, claude-haiku-4-5",
         ),
-        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-3.7-flash, gemini/gemini-3.6-flash"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.6, xai/grok-4.5, xai/grok-4.3"),
+        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview, gemini/gemini-3.8-flash, gemini/gemini-3.7-flash"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.7, xai/grok-4.6, xai/grok-4.5"),
         (
             "Azure AI Foundry",
             "AZURE_AI_API_KEY",
@@ -382,7 +382,7 @@ def list_providers():
             "OPENROUTER_API_KEY",
             "openrouter/openai/gpt-5.6-sol, openrouter/anthropic/claude-opus-5",
         ),
-        ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro, deepseek/deepseek-v4-flash"),
+        ("Deepseek", "DEEPSEEK_API_KEY", "deepseek/deepseek-v4-pro, deepseek/deepseek-flash"),
         ("ZAI (GLM)", "ZAI_API_KEY", "zai/glm-5.3, zai/glm-5.3-flash, zai/glm-5.2"),
         ("Moonshot (Kimi)", "MOONSHOT_API_KEY", "moonshot/kimi-k3, moonshot/kimi-k2.7-code, moonshot/kimi-k2.6"),
         ("MiniMax", "MINIMAX_API_KEY", "minimax/MiniMax-M3, minimax/MiniMax-M2.7"),
@@ -407,7 +407,7 @@ def list_providers():
         print(f"             Auth mode: {auth_mode}")
     print("             Example models: codex/gpt-5.6-sol, codex/gpt-5.6-terra, codex/gpt-5.5")
     print("             Note: ChatGPT-account auth serves only the ChatGPT lineup (gpt-5.6-sol/terra/luna,")
-    print("                   gpt-5.5). gpt-5.3-codex and gpt-5.5-pro need API-key auth or OPENAI_API_KEY.")
+    print("                   gpt-5.5 until 2026-10-14). gpt-5.3-codex and gpt-5.5-pro need API-key auth or OPENAI_API_KEY.")
     print(
         "             Reasoning: --codex-reasoning (minimal, low, medium, high, xhigh)"
     )
@@ -418,7 +418,7 @@ def list_providers():
     agy_status = "[installed]" if ANTIGRAVITY_AVAILABLE else "[not installed]"
     print(f"  {'Antigravity':12} {'(Google account)':24} {agy_status}")
     print(
-        "             Example models: antigravity/gemini-3.6-flash-high, antigravity/gemini-3.1-pro-high,"
+        "             Example models: antigravity/gemini-3.8-flash-high, antigravity/gemini-3.1-pro-high,"
     )
     print(
         "             antigravity/claude-sonnet-4-6, antigravity/gpt-oss-120b-medium (`agy models` lists all)"
@@ -478,7 +478,7 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
         ("OpenAI", "OPENAI_API_KEY", "gpt-5.6-sol"),
         ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-5"),
         ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview"),
-        ("xAI", "XAI_API_KEY", "xai/grok-4.6"),
+        ("xAI", "XAI_API_KEY", "xai/grok-4.7"),
         # Azure AI Foundry skipped — deployment names are user-specific; use: test --models foundry/<name>
         ("Mistral", "MISTRAL_API_KEY", "mistral/mistral-large"),
         ("Groq", "GROQ_API_KEY", "groq/llama-3.3-70b-versatile"),
@@ -734,16 +734,19 @@ def discover_models() -> dict[str, list[str]]:
         except Exception as e:
             results["ZAI (GLM)"] = [f"[error: {e}]"]
 
-    # Anthropic — no list models endpoint, show known models
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        results["Anthropic"] = [
-            "claude-fable-5",
-            "claude-opus-5",
-            "claude-sonnet-5",
-            "claude-haiku-4-5",
-            "claude-opus-4-7",
-            "claude-sonnet-4-6",
-        ]
+    # Anthropic — GET /v1/models returns newest first
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if api_key:
+        try:
+            req = urllib.request.Request(
+                "https://api.anthropic.com/v1/models?limit=100",
+                headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
+            )
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = _json.loads(resp.read())
+            results["Anthropic"] = [m["id"] for m in data["data"]]
+        except Exception as e:
+            results["Anthropic"] = [f"[error: {e}]"]
 
     # Antigravity CLI — `agy models` lists slug + display name pairs
     if ANTIGRAVITY_AVAILABLE:
