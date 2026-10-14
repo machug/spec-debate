@@ -89,9 +89,9 @@ The environment lives in `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv`, deliber
 
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro` |
-| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-fable-5-1`, `claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`, `claude-opus-4-8`, `claude-haiku-4-5` |
-| Google     | `GEMINI_API_KEY`       | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.8-flash`, `gemini/gemini-3.7-flash` |
+| OpenAI     | `OPENAI_API_KEY`       | `gpt-6.1-sol`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.5-pro` |
+| Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-1`, `claude-opus-5`, `claude-sonnet-5` |
+| Google     | `GEMINI_API_KEY`       | `gemini/gemini-4-argon`, `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.8-flash` |
 | xAI        | `XAI_API_KEY`          | `xai/grok-4.7`, `xai/grok-4.6`, `xai/grok-4.5` |
 | Azure AI   | `AZURE_AI_API_KEY`     | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | Mistral    | `MISTRAL_API_KEY`      | `mistral/mistral-large`, `mistral/codestral`|
@@ -101,7 +101,7 @@ The environment lives in `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv`, deliber
 | ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.3`, `zai/glm-5.3-flash`, `zai/glm-5.2` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
 | MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
-| Codex CLI  | (ChatGPT subscription) | `codex/gpt-6-astra` (Pro/Business/Enterprise rollout), `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.6-luna`, `codex/gpt-5.5` — ChatGPT-account auth serves ONLY these (plus `gpt-5.3-codex-spark` on Pro; `gpt-5.4`/`-mini` retired 2026-08-31; `gpt-5.5` retires 2026-10-14, replace with `gpt-5.6-sol`). `gpt-5.3-codex` and `gpt-5.5-pro` need API-key auth or the `OPENAI_API_KEY` route |
+| Codex CLI  | (ChatGPT subscription) | `codex/gpt-6.1-sol`, `codex/gpt-6-sol`, `codex/gpt-6-luna`, `codex/gpt-6-astra` (Pro/Business/Enterprise rollout), `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.6-luna` — ChatGPT-account auth serves ONLY these (plus `gpt-5.3-codex-spark` on Pro; `gpt-5.4`/`-mini` retired 2026-08-31; `gpt-5.5` retired 2026-10-14, replace with `gpt-6.1-sol`). `gpt-5.3-codex` and `gpt-5.5-pro` need API-key auth or the `OPENAI_API_KEY` route |
 | Antigravity CLI | (Google account)  | `antigravity/gemini-3.8-flash-high`, `antigravity/gemini-3.1-pro-high`, `antigravity/claude-sonnet-4-6`, `antigravity/gpt-oss-120b-medium` — slugs from `agy models` |
 | Gemini CLI | (RETIRED 2026-06-18)   | Consumer service ended; enterprise licenses only. Use `antigravity/` or `gemini/` (API key) instead |
 
@@ -119,7 +119,7 @@ The environment lives in `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv`, deliber
 - Install: `npm install -g @openai/codex && codex login`
 - Reasoning effort: `--codex-reasoning` (minimal, low, medium, high, xhigh)
 - Web search: `--codex-search` (enables web search for current information)
-- **Auth mode matters:** `codex login` with a ChatGPT account serves only the ChatGPT lineup (`gpt-5.6-sol`/`terra`/`luna`, `gpt-5.5` until 2026-10-14 — `gpt-5.4`/`-mini` retired 2026-08-31); other models 400 with "not supported when using Codex with a ChatGPT account". The debate script warns upfront and fails fast (no retries) on this error. API-key auth lifts the restriction.
+- **Auth mode matters:** `codex login` with a ChatGPT account serves only the ChatGPT lineup (`gpt-6.1-sol`, `gpt-6-sol`/`luna`, `gpt-6-astra`, `gpt-5.6-sol`/`terra`/`luna` — `gpt-5.4`/`-mini` retired 2026-08-31, `gpt-5.5` retired 2026-10-14); other models 400 with "not supported when using Codex with a ChatGPT account". The debate script warns upfront and fails fast (no retries) on this error. API-key auth lifts the restriction.
 
 **Antigravity CLI Setup (replaces Gemini CLI):**
 - Install: `curl -fsSL https://antigravity.google/cli/install.sh | bash`
@@ -406,17 +406,23 @@ cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py provide
 Then present available models to the user using AskUserQuestion with multiSelect. Build the options list based on the discover-models output. If discover-models was not run, use these defaults per provider:
 
 **If OPENAI_API_KEY is set, include:**
+- `gpt-6.1-sol` - GPT-6.1 Sol, workhorse flagship (Oct 2026, $2/$10 per 1M; same parameter rules as Astra)
+- `gpt-6-sol` - GPT-6 Sol, prior workhorse ($2/$10 per 1M)
+- `gpt-6-luna` - GPT-6 Luna, small/cheap tier ($0.1/$0.5 per 1M)
 - `gpt-6-astra` - GPT-6 Astra, most capable (Sep 2026, $10/$50 per 1M; temperature fixed at 1, no verbosity control, effort passed via extra_body)
 - `gpt-5.6-sol` - GPT-5.6 flagship (July 2026, $4/$20 per 1M)
 - `gpt-5.6-terra` - Mid tier ($2/$12 per 1M)
 - `gpt-5.6-luna` - Small/cheap tier ($0.2/$1.2 per 1M)
-- `gpt-5.5` - Prior flagship, good for general critique ($5/$30 per 1M; unified Codex+GPT line)
+- `gpt-5.5` - Older flagship ($5/$30 per 1M; API route only — retired from ChatGPT-account Codex 2026-10-14)
 - `gpt-5.5-pro` - Stronger reasoning, slower ($30/$180 per 1M; API-only, ChatGPT subscription blocks it)
 - Note: `gpt-5.4` and `gpt-5.4-mini` retired 2026-08-31 — do not offer them
 
-**If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-5.6-sol`, `codex/gpt-5.5`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro` and `gpt-5.3-codex`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
+**If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-6.1-sol`, `codex/gpt-5.6-sol`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro` and `gpt-5.3-codex`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
 
 **If ANTHROPIC_API_KEY is set, include:**
+- `claude-opus-5-5` - Claude Opus 5.5 (Oct 2026, $4/$20 per 1M)
+- `claude-sonnet-5-5` - Claude Sonnet 5.5, workhorse ($2/$10 per 1M)
+- `claude-haiku-5-5` - Claude Haiku 5.5, fast and cheap ($0.1/$0.5 per 1M)
 - `claude-fable-5-1` - Claude Fable 5.1, frontier flagship (Sep 2026, $10/$50 per 1M; rejects forced tool_choice, supports server-side refusal fallbacks)
 - `claude-fable-5` - Claude Fable 5, prior frontier (June 2026, $10/$50 per 1M)
 - `claude-opus-5` - Claude Opus 5, near-frontier at half the price (July 2026, $5/$25 per 1M)
@@ -427,7 +433,8 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - **Effort:** Claude 4.6 and newer (Sonnet 4.6, Opus 4.6, and every 4.7/4.8/5 model) default to Anthropic's `high` effort, which costs roughly 360s and 26k output tokens per model per round on a full spec re-emit. In-loop debaters therefore run at `--claude-effort low` (155s, 11k tokens, still a complete `[SPEC]`); `medium` saves only ~10%, so do not suggest it as the step-down. Judges in `--review-only` always keep `high`. Recommend a higher level only when the user asks for a deeper critique and accepts the slower round.
 
 **If GEMINI_API_KEY is set, include:**
-- `gemini/gemini-3.1-pro-preview` - Latest Gemini Pro ($2/$12 per 1M)
+- `gemini/gemini-4-argon` - Gemini 4 Argon, latest reasoning model (Oct 2026, $2/$10 per 1M, 1M context; accepts temperature)
+- `gemini/gemini-3.1-pro-preview` - Gemini 3.1 Pro ($2/$12 per 1M)
 - `gemini/gemini-3.8-flash` - Latest Gemini Flash ($0.75/$3.75 per 1M)
 - `gemini/gemini-3.7-flash` - Prior Gemini Flash ($0.75/$3.75 per 1M)
 - `gemini/gemini-3.5-flash` - Older Gemini Flash, fast
@@ -472,12 +479,14 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - Note: routed via litellm to the international endpoint (`api.minimax.io`). For the China endpoint set `MINIMAX_API_BASE=https://api.minimaxi.com/v1`.
 
 **If Codex CLI is installed, include (ChatGPT-account auth):**
+- `codex/gpt-6.1-sol` - GPT-6.1 Sol via Codex CLI (Codex's default model)
+- `codex/gpt-6-sol` - GPT-6 Sol
+- `codex/gpt-6-luna` - GPT-6 Luna, fast
 - `codex/gpt-6-astra` - GPT-6 Astra via Codex CLI (rolling out to Pro, Business $100 and Enterprise plans)
 - `codex/gpt-5.6-sol` - GPT-5.6 Sol flagship via Codex CLI
 - `codex/gpt-5.6-terra` - GPT-5.6 Terra, balanced
 - `codex/gpt-5.6-luna` - GPT-5.6 Luna, fast
-- `codex/gpt-5.5` - Prior frontier; retires from ChatGPT-account Codex 2026-10-14 (API route unaffected)
-- Note: ChatGPT-account auth serves ONLY the models above (plus `gpt-5.3-codex-spark` on ChatGPT Pro; `gpt-5.4`/`-mini` retired 2026-08-31). Anything else — `gpt-5.3-codex`, `gpt-5.5-pro` — 400s with "not supported when using Codex with a ChatGPT account"; the script fails fast and prints a hint. Codex API-key auth lifts the restriction.
+- Note: ChatGPT-account auth serves ONLY the models above (plus `gpt-5.3-codex-spark` on ChatGPT Pro; `gpt-5.4`/`-mini` retired 2026-08-31; `gpt-5.5` retired 2026-10-14). Anything else — `gpt-5.3-codex`, `gpt-5.5`, `gpt-5.5-pro` — 400s with "not supported when using Codex with a ChatGPT account"; the script fails fast and prints a hint. Codex API-key auth lifts the restriction.
 
 **If Antigravity CLI (`agy`) is installed, include:**
 - `antigravity/gemini-3.8-flash-high` - Gemini 3.8 Flash, high effort
@@ -1000,7 +1009,7 @@ the reviewer gate.
 **Why this is the right split:** in-loop debaters now also get real output
 controls — for GPT-5 models the skill sets `verbosity=low` and (non-pro)
 `reasoning_effort=medium` so reasoning + full re-emit fit the budget (GPT-6
-Astra rejects `verbosity`, so it gets only `reasoning_effort=medium`). Pro keeps
+models reject `verbosity`, so it gets only `reasoning_effort=medium`). Pro keeps
 its deep reasoning and is used where it shines: judging, not re-typing.
 
 **Use when:**

@@ -115,7 +115,7 @@ class TestNonRetryableErrors:
 class TestCodexChatGPTPreflight:
     def test_chatgpt_lineup_membership(self):
         assert "gpt-5.6-sol" in CODEX_CHATGPT_MODELS
-        assert "gpt-5.5" in CODEX_CHATGPT_MODELS
+        assert "gpt-6.1-sol" in CODEX_CHATGPT_MODELS
         assert "gpt-5.3-codex" not in CODEX_CHATGPT_MODELS
         assert "gpt-5.5-pro" not in CODEX_CHATGPT_MODELS
 
@@ -151,7 +151,7 @@ class TestCodexChatGPTPreflight:
 
     def test_silent_on_supported_models(self, capsys):
         with patch("providers.codex_auth_mode", return_value="chatgpt"):
-            warn_codex_chatgpt_model_support(["codex/gpt-5.6-sol", "codex/gpt-5.5"])
+            warn_codex_chatgpt_model_support(["codex/gpt-5.6-sol", "codex/gpt-6.1-sol"])
         assert capsys.readouterr().err == ""
 
     def test_silent_on_apikey_auth(self, capsys):
