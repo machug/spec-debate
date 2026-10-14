@@ -67,7 +67,8 @@ CODEX_AVAILABLE = CODEX_PATH is not None
 GEMINI_CLI_AVAILABLE = GEMINI_CLI_PATH is not None
 ANTIGRAVITY_AVAILABLE = ANTIGRAVITY_PATH is not None
 
-# Default reasoning effort for Codex CLI (minimal, low, medium, high, xhigh)
+# Default reasoning effort for Codex CLI (low, medium, high, xhigh, max, ultra;
+# luna models stop at max)
 DEFAULT_CODEX_REASONING = "xhigh"
 
 # Default Anthropic effort (output_config.effort) for in-loop debaters.
@@ -412,7 +413,7 @@ def list_providers():
     print("             Note: ChatGPT-account auth serves only the ChatGPT lineup (gpt-6.1-sol, gpt-6-sol/luna, gpt-6-astra on eligible plans,")
     print("                   gpt-5.6-sol/terra/luna; gpt-5.5 retired 2026-10-14). gpt-5.3-codex and gpt-5.5-pro need API-key auth or OPENAI_API_KEY.")
     print(
-        "             Reasoning: --codex-reasoning (minimal, low, medium, high, xhigh)"
+        "             Reasoning: --codex-reasoning (low, medium, high, xhigh, max, ultra; luna stops at max)"
     )
     print("             Install: npm install -g @openai/codex && codex login")
     print()
@@ -421,7 +422,7 @@ def list_providers():
     agy_status = "[installed]" if ANTIGRAVITY_AVAILABLE else "[not installed]"
     print(f"  {'Antigravity':12} {'(Google account)':24} {agy_status}")
     print(
-        "             Example models: antigravity/gemini-3.8-flash-high, antigravity/gemini-3.1-pro-high,"
+        "             Example models: antigravity/gemini-3.8-flash-high, antigravity/gemini-3.8-flash-low,"
     )
     print(
         "             antigravity/claude-sonnet-4-6, antigravity/gpt-oss-120b-medium (`agy models` lists all)"
@@ -478,9 +479,9 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
         Note: env_var can be None for providers like Codex CLI that use alternative auth.
     """
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-5.6-sol"),
-        ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-5"),
-        ("Google", "GEMINI_API_KEY", "gemini/gemini-3.1-pro-preview"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-6.1-sol"),
+        ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-5-5"),
+        ("Google", "GEMINI_API_KEY", "gemini/gemini-4-argon"),
         ("xAI", "XAI_API_KEY", "xai/grok-4.7"),
         # Azure AI Foundry skipped — deployment names are user-specific; use: test --models foundry/<name>
         ("Mistral", "MISTRAL_API_KEY", "mistral/mistral-large"),
@@ -499,13 +500,13 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
 
     # Add Codex CLI if available
     if CODEX_AVAILABLE:
-        available.append(("Codex CLI", None, "codex/gpt-5.6-sol"))
+        available.append(("Codex CLI", None, "codex/gpt-6.1-sol"))
 
     # Add Antigravity CLI if available (Gemini CLI's successor; the old
     # gemini-cli/ route is retired for consumer accounts and no longer
     # auto-selected — it still works if requested explicitly)
     if ANTIGRAVITY_AVAILABLE:
-        available.append(("Antigravity CLI", None, "antigravity/gemini-3.1-pro-high"))
+        available.append(("Antigravity CLI", None, "antigravity/gemini-3.8-flash-high"))
 
     return available
 

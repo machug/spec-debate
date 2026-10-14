@@ -54,3 +54,26 @@ def test_codex_chatgpt_lineup():
     for m in ("gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna", "gpt-6-astra"):
         assert m in providers.CODEX_CHATGPT_MODELS
     assert "gpt-5.5" not in providers.CODEX_CHATGPT_MODELS
+
+
+def test_defaults_refreshed(monkeypatch):
+    for var in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY"):
+        monkeypatch.setenv(var, "k")
+    monkeypatch.setattr(providers, "CODEX_AVAILABLE", True)
+    monkeypatch.setattr(providers, "ANTIGRAVITY_AVAILABLE", True)
+    defaults = {name: model for name, _, model in providers.get_available_providers()}
+    assert defaults["OpenAI"] == "gpt-6.1-sol"
+    assert defaults["Anthropic"] == "claude-opus-5-5"
+    assert defaults["Google"] == "gemini/gemini-4-argon"
+    assert defaults["Codex CLI"] == "codex/gpt-6.1-sol"
+    assert defaults["Antigravity CLI"] == "antigravity/gemini-3.8-flash-high"
+
+
+def test_codex_reasoning_accepts_max_and_ultra():
+    import argparse
+    import debate
+
+    parser = argparse.ArgumentParser()
+    debate.add_codex_arguments(parser)
+    for effort in ("max", "ultra"):
+        assert parser.parse_args(["--codex-reasoning", effort]).codex_reasoning == effort

@@ -664,7 +664,7 @@ def call_codex_model(
         system_prompt: System instructions for the model
         user_message: User prompt to send
         model: Model name (e.g., "codex/gpt-5.3-codex" -> uses "gpt-5.3-codex")
-        reasoning_effort: Thinking level (minimal, low, medium, high, xhigh). Default: xhigh
+        reasoning_effort: Thinking level (low, medium, high, xhigh, max, ultra). Default: xhigh
         timeout: Timeout in seconds (default 10 minutes)
         search: Enable web search capability for Codex
 
@@ -874,7 +874,7 @@ def resolve_antigravity_model(model: str) -> Optional[str]:
     """Extract the agy model slug from an antigravity/<slug> model string.
 
     `agy --model` accepts slugs exactly as listed by `agy models`
-    (e.g. gemini-3.1-pro-high, claude-sonnet-4-6, gpt-oss-120b-medium).
+    (e.g. gemini-3.8-flash-high, claude-sonnet-4-6, gpt-oss-120b-medium).
     Returns None for a bare "antigravity" (use agy's default model).
     """
     slug = model.split("/", 1)[1] if "/" in model else ""

@@ -34,10 +34,10 @@ Supported providers (set corresponding API key):
     Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.6, moonshot/kimi-k2.5, etc.
     Codex CLI:  (ChatGPT subscription) models: codex/gpt-6.1-sol, codex/gpt-6-sol, codex/gpt-5.6-sol
                 Install: npm install -g @openai/codex && codex login
-                Reasoning: --codex-reasoning xhigh (minimal, low, medium, high, xhigh)
+                Reasoning: --codex-reasoning xhigh (low, medium, high, xhigh, max, ultra)
                 Note: ChatGPT-account auth serves only the ChatGPT lineup; other
                 models (gpt-5.3-codex, gpt-5.5-pro) need API-key auth
-    Antigravity: (Google account)      models: antigravity/gemini-3.8-flash-high, antigravity/gemini-3.1-pro-high
+    Antigravity: (Google account)      models: antigravity/gemini-3.8-flash-high, antigravity/gemini-3.8-flash-low
                 Install: curl -fsSL https://antigravity.google/cli/install.sh | bash
                 Auth: run `agy` once interactively; `agy models` lists slugs
 
@@ -357,8 +357,8 @@ def add_codex_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--codex-reasoning",
         default=DEFAULT_CODEX_REASONING,
-        choices=["low", "medium", "high", "xhigh"],
-        help=f"Reasoning effort for Codex CLI models (default: {DEFAULT_CODEX_REASONING})",
+        choices=["low", "medium", "high", "xhigh", "max", "ultra"],
+        help=f"Reasoning effort for Codex CLI models (luna models stop at max) (default: {DEFAULT_CODEX_REASONING})",
     )
     parser.add_argument(
         "--codex-search",

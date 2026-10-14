@@ -102,7 +102,7 @@ The environment lives in `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv`, deliber
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
 | MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
 | Codex CLI  | (ChatGPT subscription) | `codex/gpt-6.1-sol`, `codex/gpt-6-sol`, `codex/gpt-6-luna`, `codex/gpt-6-astra` (Pro/Business/Enterprise rollout), `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.6-luna` — ChatGPT-account auth serves ONLY these (plus `gpt-5.3-codex-spark` on Pro; `gpt-5.4`/`-mini` retired 2026-08-31; `gpt-5.5` retired 2026-10-14, replace with `gpt-6.1-sol`). `gpt-5.3-codex` and `gpt-5.5-pro` need API-key auth or the `OPENAI_API_KEY` route |
-| Antigravity CLI | (Google account)  | `antigravity/gemini-3.8-flash-high`, `antigravity/gemini-3.1-pro-high`, `antigravity/claude-sonnet-4-6`, `antigravity/gpt-oss-120b-medium` — slugs from `agy models` |
+| Antigravity CLI | (Google account)  | `antigravity/gemini-3.8-flash-high`, `antigravity/claude-sonnet-4-6`, `antigravity/gpt-oss-120b-medium` — slugs from `agy models` |
 | Gemini CLI | (RETIRED 2026-06-18)   | Consumer service ended; enterprise licenses only. Use `antigravity/` or `gemini/` (API key) instead |
 
 **Discover latest models:** Run `cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py discover-models` to query provider APIs for currently available models.
@@ -117,14 +117,14 @@ The environment lives in `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv`, deliber
 
 **Codex CLI Setup:**
 - Install: `npm install -g @openai/codex && codex login`
-- Reasoning effort: `--codex-reasoning` (minimal, low, medium, high, xhigh)
+- Reasoning effort: `--codex-reasoning` (low, medium, high, xhigh, max, ultra; luna models stop at max). Default `xhigh`
 - Web search: `--codex-search` (enables web search for current information)
 - **Auth mode matters:** `codex login` with a ChatGPT account serves only the ChatGPT lineup (`gpt-6.1-sol`, `gpt-6-sol`/`luna`, `gpt-6-astra`, `gpt-5.6-sol`/`terra`/`luna` — `gpt-5.4`/`-mini` retired 2026-08-31, `gpt-5.5` retired 2026-10-14); other models 400 with "not supported when using Codex with a ChatGPT account". The debate script warns upfront and fails fast (no retries) on this error. API-key auth lifts the restriction.
 
 **Antigravity CLI Setup (replaces Gemini CLI):**
 - Install: `curl -fsSL https://antigravity.google/cli/install.sh | bash`
 - Auth: run `agy` once interactively (Google sign-in); headless mode then reuses cached credentials
-- Models: run `agy models` for current slugs (e.g. `gemini-3.8-flash-high`, `gemini-3.1-pro-high`, `claude-sonnet-4-6`, `gpt-oss-120b-medium`) — use as `antigravity/<slug>`; bare `antigravity` uses the default model
+- Models: run `agy models` for current slugs (e.g. `gemini-3.8-flash-high`, `claude-sonnet-4-6`, `gpt-oss-120b-medium`) — use as `antigravity/<slug>`; bare `antigravity` uses the default model
 - No API key needed — uses Google account authentication
 
 **Gemini CLI (retired):**
@@ -422,7 +422,7 @@ Then present available models to the user using AskUserQuestion with multiSelect
 **If ANTHROPIC_API_KEY is set, include:**
 - `claude-opus-5-5` - Claude Opus 5.5 (Oct 2026, $4/$20 per 1M)
 - `claude-sonnet-5-5` - Claude Sonnet 5.5, workhorse ($2/$10 per 1M)
-- `claude-haiku-5-5` - Claude Haiku 5.5, fast and cheap ($0.1/$0.5 per 1M)
+- `claude-haiku-5-5` - Claude Haiku 5.5, fast and cheap ($0.1/$0.5 per 1M; $0.5/$2.5 for prompts over 100K tokens)
 - `claude-fable-5-1` - Claude Fable 5.1, frontier flagship (Sep 2026, $10/$50 per 1M; rejects forced tool_choice, supports server-side refusal fallbacks)
 - `claude-fable-5` - Claude Fable 5, prior frontier (June 2026, $10/$50 per 1M)
 - `claude-opus-5` - Claude Opus 5, near-frontier at half the price (July 2026, $5/$25 per 1M)
@@ -433,7 +433,7 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - **Effort:** Claude 4.6 and newer (Sonnet 4.6, Opus 4.6, and every 4.7/4.8/5 model) default to Anthropic's `high` effort, which costs roughly 360s and 26k output tokens per model per round on a full spec re-emit. In-loop debaters therefore run at `--claude-effort low` (155s, 11k tokens, still a complete `[SPEC]`); `medium` saves only ~10%, so do not suggest it as the step-down. Judges in `--review-only` always keep `high`. Recommend a higher level only when the user asks for a deeper critique and accepts the slower round.
 
 **If GEMINI_API_KEY is set, include:**
-- `gemini/gemini-4-argon` - Gemini 4 Argon, latest reasoning model (Oct 2026, $2/$10 per 1M, 1M context; accepts temperature)
+- `gemini/gemini-4-argon` - Gemini 4 Argon, latest reasoning model (Oct 2026, $2/$10 per 1M until 2026-11-30, then $4/$20; 1M context; accepts temperature)
 - `gemini/gemini-3.1-pro-preview` - Gemini 3.1 Pro ($2/$12 per 1M)
 - `gemini/gemini-3.8-flash` - Latest Gemini Flash ($0.75/$3.75 per 1M)
 - `gemini/gemini-3.7-flash` - Prior Gemini Flash ($0.75/$3.75 per 1M)
@@ -490,7 +490,6 @@ Then present available models to the user using AskUserQuestion with multiSelect
 
 **If Antigravity CLI (`agy`) is installed, include:**
 - `antigravity/gemini-3.8-flash-high` - Gemini 3.8 Flash, high effort
-- `antigravity/gemini-3.1-pro-high` - Gemini 3.1 Pro, high effort
 - `antigravity/claude-sonnet-4-6` - Claude Sonnet 4.6 via Antigravity
 - `antigravity/gpt-oss-120b-medium` - GPT-OSS 120B via Antigravity
 - Run `agy models` for the live slug list; requires one-time interactive `agy` Google sign-in
