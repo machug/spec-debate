@@ -132,7 +132,8 @@ def is_reasoning_model(model: str) -> bool:
     if model_lower.startswith(("o1", "o3", "o4")) or "/o1" in model_lower or "/o3" in model_lower or "/o4" in model_lower:
         return True
     # GPT-5/GPT-6 family: gpt-5, gpt-5.5, gpt-5-mini, gpt-6-astra, etc.
-    # (verified 2026-09-22: gpt-6-astra rejects temperature != 1 and max_tokens)
+    # (verified 2026-09-22: gpt-6-astra; 2026-10-14: gpt-6.1-sol, gpt-6-sol,
+    # gpt-6-luna — all reject temperature != 1 and max_tokens)
     if "gpt-5" in model_lower or "gpt-6" in model_lower:
         return True
     # xAI reasoning models: grok-*-reasoning but NOT *-non-reasoning
