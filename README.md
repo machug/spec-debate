@@ -89,9 +89,9 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 
 | Provider | Env Var | Example Models |
 |----------|---------|----------------|
-| OpenAI | `OPENAI_API_KEY` | `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro` |
-| Anthropic | `ANTHROPIC_API_KEY` | `claude-fable-5-1`, `claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`, `claude-opus-4-8`, `claude-haiku-4-5` |
-| Google | `GEMINI_API_KEY` | `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.8-flash`, `gemini/gemini-3.7-flash` |
+| OpenAI | `OPENAI_API_KEY` | `gpt-6.1-sol`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.5-pro` |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-1`, `claude-opus-5`, `claude-sonnet-5` |
+| Google | `GEMINI_API_KEY` | `gemini/gemini-4-argon`, `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.8-flash` |
 | xAI | `XAI_API_KEY` | `xai/grok-4.7`, `xai/grok-4.6`, `xai/grok-4.5` |
 | Azure AI Foundry | `AZURE_AI_API_KEY` + `AZURE_AI_API_BASE` | `foundry/claude-opus-4-7`, `foundry/grok-4`, `foundry/Phi-4-reasoning` |
 | OpenRouter | `OPENROUTER_API_KEY` | `openrouter/openai/gpt-5.6-sol` |
@@ -101,8 +101,8 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 | ZAI (GLM) | `ZAI_API_KEY` | `zai/glm-5.3`, `zai/glm-5.3-flash`, `zai/glm-5.2` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
 | MiniMax | `MINIMAX_API_KEY` | `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7` |
-| Codex CLI | ChatGPT subscription | `codex/gpt-6-astra` (eligible plans), `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.5` (ChatGPT-account auth serves only the ChatGPT lineup; `gpt-5.5` retires from it 2026-10-14) |
-| Antigravity CLI | Google account | `antigravity/gemini-3.8-flash-high`, `antigravity/gemini-3.1-pro-high` (`agy models` lists all) |
+| Codex CLI | ChatGPT subscription | `codex/gpt-6.1-sol`, `codex/gpt-6-sol`, `codex/gpt-6-astra` (eligible plans), `codex/gpt-5.6-sol` (ChatGPT-account auth serves only the ChatGPT lineup; `gpt-5.5` retired from it 2026-10-14) |
+| Antigravity CLI | Google account | `antigravity/gemini-3.8-flash-high` (`agy models` lists all) |
 | Gemini CLI | RETIRED 2026-06-18 | Consumer service ended — use `antigravity/` or `gemini/` instead |
 
 Run `python3 debate.py discover-models` to query provider APIs for the latest available models.
@@ -115,11 +115,11 @@ Run `python3 debate.py discover-models` to query provider APIs for the latest av
 
 Two Anthropic-specific rules apply automatically. You do not need to configure either one.
 
-**Temperature.** Claude Opus 4.7 and newer — including Claude Opus 5, Sonnet 5, Fable 5, and Fable 5.1 — accept only `temperature=1`. `debate.py` detects these models and omits the parameter. Claude Sonnet 4.6, Opus 4.6, and Haiku 4.5 still accept a temperature and keep the existing behavior.
+**Temperature.** Claude Opus 4.7 and newer — including Claude Opus 5, Sonnet 5, Fable 5, Fable 5.1, and the 5.5 family — accept only `temperature=1`. `debate.py` detects these models and omits the parameter. Claude Sonnet 4.6, Opus 4.6, and Haiku 4.5 still accept a temperature and keep the existing behavior.
 
 **Effort.** Claude models from the 4.6 generation up — Sonnet 4.6, Opus 4.6, and every 4.7, 4.8, and 5 model — support Anthropic's `effort` control and default to `high`. On a full spec re-emit, `high` is slow and expensive, so `debate.py` runs in-loop debaters at `low`. Judges in `--review-only` keep the `high` default, because they emit `[AGREE]` or a short critique and never re-emit the spec.
 
-**GPT-6.** `gpt-6-astra` also rejects any temperature but 1, needs `max_completion_tokens`, and does not accept the GPT-5 `text.verbosity` control. `debate.py` handles all three and sends `reasoning_effort=medium` to in-loop debaters. Defaults stay on `gpt-5.6-sol`; Astra is $10/$50 per 1M and plan-gated on the Codex route.
+**GPT-6.** `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6-sol`, and `gpt-6-luna` also reject any temperature but 1, need `max_completion_tokens`, and do not accept the GPT-5 `text.verbosity` control. `debate.py` handles all three and sends `reasoning_effort=medium` to in-loop debaters. The OpenAI default is `gpt-6.1-sol` ($2/$10 per 1M); Astra is $10/$50 per 1M and plan-gated on the Codex route.
 
 Measured on Claude Opus 5 with one technical-specification critique, 2026-08-31:
 
@@ -352,7 +352,7 @@ python3 debate.py send-final --models MODEL_LIST --doc-type TYPE --rounds N < sp
 | `--press, -p` | Anti-laziness check |
 | `--telegram, -t` | Enable Telegram notifications |
 | `--poll-timeout` | Telegram reply timeout in seconds (default: 60) |
-| `--codex-reasoning` | Reasoning effort for Codex CLI (low/medium/high/xhigh) |
+| `--codex-reasoning` | Reasoning effort for Codex CLI (low/medium/high/xhigh/max/ultra; luna models stop at max) |
 | `--claude-effort` | Effort for Claude 4.6+ debaters (low/medium/high/xhigh/max, default: `low`) |
 | `--codex-search` | Enable web search for Codex CLI models |
 | `--timeout` | API/CLI call timeout in seconds (default: 600) |
