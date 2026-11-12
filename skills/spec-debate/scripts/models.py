@@ -74,7 +74,7 @@ NON_RETRYABLE_PATTERNS = (
 
 CODEX_CHATGPT_HINT = (
     "Codex is authenticated with a ChatGPT account, which only serves: "
-    "gpt-6.1-sol, gpt-6-sol, gpt-6-luna, gpt-6-astra (eligible plans), gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna "
+    "gpt-6.1-sol, gpt-6.1-terra, gpt-6-sol, gpt-6-luna, gpt-6-astra (eligible plans), gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna "
     "(gpt-5.3-codex-spark needs ChatGPT Pro; gpt-5.4/-mini retired 2026-08-31; gpt-5.5 retired 2026-10-14). "
     "For other models authenticate Codex with an API key or use the "
     "OPENAI_API_KEY litellm route (e.g. --models gpt-5.5-pro)."
@@ -133,7 +133,7 @@ def is_reasoning_model(model: str) -> bool:
         return True
     # GPT-5/GPT-6 family: gpt-5, gpt-5.5, gpt-5-mini, gpt-6-astra, etc.
     # (verified 2026-09-22: gpt-6-astra; 2026-10-14: gpt-6.1-sol, gpt-6-sol,
-    # gpt-6-luna — all reject temperature != 1 and max_tokens)
+    # gpt-6-luna; 2026-11-12: gpt-6.1-terra — all reject temperature != 1 and max_tokens)
     if "gpt-5" in model_lower or "gpt-6" in model_lower:
         return True
     # xAI reasoning models: grok-*-reasoning but NOT *-non-reasoning

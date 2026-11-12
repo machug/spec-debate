@@ -21,9 +21,9 @@ Usage:
     python3 debate.py sessions
 
 Supported providers (set corresponding API key):
-    OpenAI:     OPENAI_API_KEY       models: gpt-6.1-sol, gpt-6-astra, gpt-5.6-sol, gpt-5.5-pro, etc.
-    Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5, claude-fable-5-1, etc.
-    Google:     GEMINI_API_KEY       models: gemini/gemini-4-argon, gemini/gemini-3.1-pro-preview, gemini/gemini-3.8-flash, etc.
+    OpenAI:     OPENAI_API_KEY       models: gpt-6.1-sol, gpt-6.1-terra, gpt-6-astra, gpt-5.6-sol, gpt-5.5-pro, etc.
+    Anthropic:  ANTHROPIC_API_KEY    models: claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5, claude-fable-5-2, claude-fable-5-1, etc.
+    Google:     GEMINI_API_KEY       models: gemini/gemini-4-argon, gemini/gemini-4-carbon, gemini/gemini-3.1-pro-preview, gemini/gemini-3.8-flash, etc.
     xAI:        XAI_API_KEY          models: xai/grok-4.7, xai/grok-4.6, xai/grok-4.20-0309-reasoning, etc.
     Azure AI:   AZURE_AI_API_KEY     models: foundry/claude-opus-4-7, foundry/grok-4, foundry/Phi-4-reasoning, etc.
     Mistral:    MISTRAL_API_KEY      models: mistral/mistral-large, etc.
@@ -32,7 +32,7 @@ Supported providers (set corresponding API key):
     Deepseek:   DEEPSEEK_API_KEY     models: deepseek/deepseek-v4-pro, deepseek/deepseek-flash, etc.
     ZAI (GLM):  ZAI_API_KEY          models: zai/glm-5.1, zai/glm-5-turbo, zai/glm-5, etc.
     Kimi:       MOONSHOT_API_KEY     models: moonshot/kimi-k2.6, moonshot/kimi-k2.5, etc.
-    Codex CLI:  (ChatGPT subscription) models: codex/gpt-6.1-sol, codex/gpt-6-sol, codex/gpt-5.6-sol
+    Codex CLI:  (ChatGPT subscription) models: codex/gpt-6.1-sol, codex/gpt-6.1-terra, codex/gpt-6-sol, codex/gpt-5.6-sol
                 Install: npm install -g @openai/codex && codex login
                 Reasoning: --codex-reasoning xhigh (low, medium, high, xhigh, max, ultra)
                 Note: ChatGPT-account auth serves only the ChatGPT lineup; other
