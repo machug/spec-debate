@@ -66,6 +66,25 @@ ANTIGRAVITY_PATH = shutil.which("agy")
 CODEX_AVAILABLE = CODEX_PATH is not None
 GEMINI_CLI_AVAILABLE = GEMINI_CLI_PATH is not None
 ANTIGRAVITY_AVAILABLE = ANTIGRAVITY_PATH is not None
+# Google's gemini-api CLI. Not a model route: it uses the same GEMINI_API_KEY
+# as gemini/ models. Detected only to explain why Gemini is skipped when its
+# key lives in the OS keychain (`gemini-api configure`) instead of the env.
+GEMINI_API_CLI_AVAILABLE = shutil.which("gemini-api") is not None
+
+GEMINI_API_KEY_HINT = (
+    "Note: gemini-api is installed but GEMINI_API_KEY is not set, so Gemini "
+    "models are skipped. `gemini-api configure` stores the key in the OS "
+    "keychain, which this skill cannot read. Run: export GEMINI_API_KEY=<key> "
+    "(free key: https://aistudio.google.com/apikey)"
+)
+_gemini_api_hint_shown = False
+
+
+def gemini_api_key_hint() -> Optional[str]:
+    """Return the hint when gemini-api is installed but GEMINI_API_KEY is unset."""
+    if GEMINI_API_CLI_AVAILABLE and not os.environ.get("GEMINI_API_KEY"):
+        return GEMINI_API_KEY_HINT
+    return None
 
 # Default reasoning effort for Codex CLI (low, medium, high, xhigh, max, ultra;
 # luna models stop at max)
@@ -404,6 +423,8 @@ def list_providers():
         status = "[set]" if os.environ.get(key) else "[not set]"
         print(f"  {name:12} {key:24} {status}")
         print(f"             Example models: {models}")
+        if key == "GEMINI_API_KEY" and gemini_api_key_hint():
+            print(f"             {gemini_api_key_hint()}")
         print()
 
     # Codex CLI (uses ChatGPT subscription, not API key)
@@ -500,6 +521,12 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
     for name, key, model in providers:
         if os.environ.get(key):
             available.append((name, key, model))
+
+    global _gemini_api_hint_shown
+    hint = gemini_api_key_hint()
+    if hint and not _gemini_api_hint_shown:
+        _gemini_api_hint_shown = True
+        print(hint + "\n", file=sys.stderr)
 
     # Add Codex CLI if available
     if CODEX_AVAILABLE:
