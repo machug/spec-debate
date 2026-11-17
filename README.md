@@ -107,7 +107,7 @@ The skill auto-detects available providers at runtime. Run `/spec-debate provide
 
 Run `python3 debate.py discover-models` to query provider APIs for the latest available models.
 
-**No API key?** Install [Codex CLI](https://github.com/openai/codex) (`npm install -g @openai/codex`) or [Antigravity CLI](https://antigravity.google) (`curl -fsSL https://antigravity.google/cli/install.sh | bash`, then run `agy` once to sign in) to use your existing ChatGPT or Google subscription. Note: ChatGPT-account Codex serves only the current ChatGPT lineup (`gpt-5.6-sol`/`terra`/`luna`, `gpt-5.5`); other models need API-key auth.
+**No API key?** Install [Codex CLI](https://github.com/openai/codex) (`npm install -g @openai/codex`) or [Antigravity CLI](https://antigravity.google) (`curl -fsSL https://antigravity.google/cli/install.sh | bash`, then run `agy` once to sign in) to use your existing ChatGPT or Google subscription. Note: ChatGPT-account Codex serves only the current ChatGPT lineup (`gpt-5.6-sol`/`terra`/`luna`, `gpt-5.5`); other models need API-key auth. For Gemini, the lightest route is a free key from [Google AI Studio](https://aistudio.google.com/apikey): `export GEMINI_API_KEY=...` and use `gemini/` models, nothing else to install. If you set the key with Google's `gemini-api configure`, it lives in the OS keychain and this skill cannot see it; export it as well.
 
 **Model costs** are discovered dynamically from [LiteLLM's model registry](https://github.com/BerriAI/litellm) — no hardcoded pricing to go stale.
 
