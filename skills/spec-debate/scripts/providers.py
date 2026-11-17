@@ -81,8 +81,10 @@ DEFAULT_CLAUDE_EFFORT = "low"
 
 # Models Codex CLI serves when authenticated with a ChatGPT account (not an
 # API key). Rotates with OpenAI's ChatGPT lineup — see
-# https://developers.openai.com/codex/models. Last verified 2026-11-12.
+# https://developers.openai.com/codex/models. Last verified 2026-11-18.
 CODEX_CHATGPT_MODELS = {
+    "gpt-6.2-sol",
+    "gpt-6.2-astra",
     "gpt-6.1-sol",
     "gpt-6.1-terra",
     "gpt-6-sol",
@@ -131,7 +133,7 @@ def warn_codex_chatgpt_model_support(models: list[str]) -> None:
         print(
             f"Warning: Codex CLI is authenticated with a ChatGPT account, which "
             f"likely rejects: {', '.join(unsupported)}. ChatGPT-account models "
-            f"(as of 2026-11-12): gpt-6.1-sol, gpt-6.1-terra, gpt-6-sol, gpt-6-luna, gpt-6-astra (eligible plans), gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna. "
+            f"(as of 2026-11-18): gpt-6.2-sol, gpt-6.2-astra, gpt-6.1-sol, gpt-6.1-terra, gpt-6-sol, gpt-6-luna, gpt-6-astra (eligible plans), gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna. "
             f"Other models need Codex API-key auth or the OPENAI_API_KEY route.\n",
             file=sys.stderr,
         )
@@ -366,7 +368,7 @@ def list_providers():
         print("-" * 60 + "\n")
 
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-6.1-sol, gpt-6.1-terra, gpt-6-sol, gpt-6-luna, gpt-6-astra, gpt-5.6-sol, gpt-5.6-terra, gpt-5.5-pro"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-6.2-sol, gpt-6.2-astra, gpt-6.1-sol, gpt-6.1-terra, gpt-6-sol, gpt-6-luna, gpt-6-astra, gpt-5.6-sol, gpt-5.6-terra, gpt-5.5-pro"),
         (
             "Anthropic",
             "ANTHROPIC_API_KEY",
@@ -410,8 +412,8 @@ def list_providers():
     print(f"  {'Codex CLI':12} {'(ChatGPT subscription)':24} {codex_status}")
     if auth_mode:
         print(f"             Auth mode: {auth_mode}")
-    print("             Example models: codex/gpt-6.1-sol, codex/gpt-6.1-terra, codex/gpt-6-sol, codex/gpt-6-astra, codex/gpt-5.6-sol")
-    print("             Note: ChatGPT-account auth serves only the ChatGPT lineup (gpt-6.1-sol/terra, gpt-6-sol/luna, gpt-6-astra on eligible plans,")
+    print("             Example models: codex/gpt-6.2-sol, codex/gpt-6.2-astra, codex/gpt-6.1-sol, codex/gpt-6.1-terra, codex/gpt-6-sol, codex/gpt-6-astra, codex/gpt-5.6-sol")
+    print("             Note: ChatGPT-account auth serves only the ChatGPT lineup (gpt-6.2-sol/astra, gpt-6.1-sol/terra, gpt-6-sol/luna, gpt-6-astra on eligible plans,")
     print("                   gpt-5.6-sol/terra/luna; gpt-5.5 retired 2026-10-14). gpt-5.3-codex and gpt-5.5-pro need API-key auth or OPENAI_API_KEY.")
     print(
         "             Reasoning: --codex-reasoning (low, medium, high, xhigh, max, ultra; luna stops at max)"
@@ -480,7 +482,7 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
         Note: env_var can be None for providers like Codex CLI that use alternative auth.
     """
     providers = [
-        ("OpenAI", "OPENAI_API_KEY", "gpt-6.1-sol"),
+        ("OpenAI", "OPENAI_API_KEY", "gpt-6.2-sol"),
         ("Anthropic", "ANTHROPIC_API_KEY", "claude-opus-5-5"),
         ("Google", "GEMINI_API_KEY", "gemini/gemini-4-argon"),
         ("xAI", "XAI_API_KEY", "xai/grok-4.7"),
@@ -501,7 +503,7 @@ def get_available_providers() -> list[tuple[str, Optional[str], str]]:
 
     # Add Codex CLI if available
     if CODEX_AVAILABLE:
-        available.append(("Codex CLI", None, "codex/gpt-6.1-sol"))
+        available.append(("Codex CLI", None, "codex/gpt-6.2-sol"))
 
     # Add Antigravity CLI if available (Gemini CLI's successor; the old
     # gemini-cli/ route is retired for consumer accounts and no longer

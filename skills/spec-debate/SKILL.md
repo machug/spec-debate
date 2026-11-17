@@ -89,7 +89,7 @@ The environment lives in `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv`, deliber
 
 | Provider   | API Key Env Var        | Example Models                              |
 |------------|------------------------|---------------------------------------------|
-| OpenAI     | `OPENAI_API_KEY`       | `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.5-pro` |
+| OpenAI     | `OPENAI_API_KEY`       | `gpt-6.2-sol`, `gpt-6.2-astra`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.5-pro` |
 | Anthropic  | `ANTHROPIC_API_KEY`    | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-2`, `claude-fable-5-1`, `claude-opus-5`, `claude-sonnet-5` |
 | Google     | `GEMINI_API_KEY`       | `gemini/gemini-4-argon`, `gemini/gemini-4-carbon`, `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.8-flash` |
 | xAI        | `XAI_API_KEY`          | `xai/grok-4.7`, `xai/grok-build-0.1`, `xai/grok-4.6`, `xai/grok-4.5` |
@@ -101,7 +101,7 @@ The environment lives in `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv`, deliber
 | ZAI (GLM)  | `ZAI_API_KEY`          | `zai/glm-5.3`, `zai/glm-5.3-flash`, `zai/glm-5.2` |
 | Moonshot (Kimi) | `MOONSHOT_API_KEY` | `moonshot/kimi-k3.1-pro`, `moonshot/kimi-k3`, `moonshot/kimi-k2.7-code`, `moonshot/kimi-k2.6` |
 | MiniMax    | `MINIMAX_API_KEY`      | `minimax/MiniMax-M3`, `minimax/MiniMax-M3.1-Flash`, `minimax/MiniMax-M2.7` |
-| Codex CLI  | (ChatGPT subscription) | `codex/gpt-6.1-sol`, `codex/gpt-6.1-terra`, `codex/gpt-6-sol`, `codex/gpt-6-luna`, `codex/gpt-6-astra` (Pro/Business/Enterprise rollout), `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.6-luna` — ChatGPT-account auth serves ONLY these (plus `gpt-5.3-codex-spark` on Pro; `gpt-5.4`/`-mini` retired 2026-08-31; `gpt-5.5` retired 2026-10-14, replace with `gpt-6.1-sol`). `gpt-5.3-codex` and `gpt-5.5-pro` need API-key auth or the `OPENAI_API_KEY` route |
+| Codex CLI  | (ChatGPT subscription) | `codex/gpt-6.2-sol`, `codex/gpt-6.2-astra`, `codex/gpt-6.1-sol`, `codex/gpt-6.1-terra`, `codex/gpt-6-sol`, `codex/gpt-6-luna`, `codex/gpt-6-astra` (Pro/Business/Enterprise rollout), `codex/gpt-5.6-sol`, `codex/gpt-5.6-terra`, `codex/gpt-5.6-luna` — ChatGPT-account auth serves ONLY these (plus `gpt-5.3-codex-spark` on Pro; `gpt-5.4`/`-mini` retired 2026-08-31; `gpt-5.5` retired 2026-10-14, replace with `gpt-6.2-sol`). `gpt-5.3-codex` and `gpt-5.5-pro` need API-key auth or the `OPENAI_API_KEY` route |
 | Antigravity CLI | (Google account)  | `antigravity/gemini-3.8-flash-high`, `antigravity/claude-sonnet-4-6`, `antigravity/gpt-oss-120b-medium` — slugs from `agy models` |
 | Gemini CLI | (RETIRED 2026-06-18)   | Consumer service ended; enterprise licenses only. Use `antigravity/` or `gemini/` (API key) instead |
 
@@ -119,7 +119,7 @@ The environment lives in `${XDG_CACHE_HOME:-~/.cache}/spec-debate/venv`, deliber
 - Install: `npm install -g @openai/codex && codex login`
 - Reasoning effort: `--codex-reasoning` (low, medium, high, xhigh, max, ultra; luna models stop at max). Default `xhigh`
 - Web search: `--codex-search` (enables web search for current information)
-- **Auth mode matters:** `codex login` with a ChatGPT account serves only the ChatGPT lineup (`gpt-6.1-sol`/`terra`, `gpt-6-sol`/`luna`, `gpt-6-astra`, `gpt-5.6-sol`/`terra`/`luna` — `gpt-5.4`/`-mini` retired 2026-08-31, `gpt-5.5` retired 2026-10-14); other models 400 with "not supported when using Codex with a ChatGPT account". The debate script warns upfront and fails fast (no retries) on this error. API-key auth lifts the restriction.
+- **Auth mode matters:** `codex login` with a ChatGPT account serves only the ChatGPT lineup (`gpt-6.2-sol`/`astra`, `gpt-6.1-sol`/`terra`, `gpt-6-sol`/`luna`, `gpt-6-astra`, `gpt-5.6-sol`/`terra`/`luna` — `gpt-5.4`/`-mini` retired 2026-08-31, `gpt-5.5` retired 2026-10-14); other models 400 with "not supported when using Codex with a ChatGPT account". The debate script warns upfront and fails fast (no retries) on this error. API-key auth lifts the restriction.
 
 **Antigravity CLI Setup (replaces Gemini CLI):**
 - Install: `curl -fsSL https://antigravity.google/cli/install.sh | bash`
@@ -406,11 +406,13 @@ cd ${CLAUDE_PLUGIN_ROOT}/skills/spec-debate/scripts && python3 debate.py provide
 Then present available models to the user using AskUserQuestion with multiSelect. Build the options list based on the discover-models output. If discover-models was not run, use these defaults per provider:
 
 **If OPENAI_API_KEY is set, include:**
-- `gpt-6.1-sol` - GPT-6.1 Sol, workhorse flagship (Oct 2026, $2/$10 per 1M; same parameter rules as Astra)
+- `gpt-6.2-sol` - GPT-6.2 Sol, workhorse flagship and default (Nov 2026, $2/$10 per 1M; 500K context; same parameter rules as Astra)
+- `gpt-6.2-astra` - GPT-6.2 Astra, most capable (Nov 2026, $8/$40 per 1M; 272K context; same parameter rules as Astra)
+- `gpt-6.1-sol` - GPT-6.1 Sol, prior workhorse (Oct 2026, $2/$10 per 1M; same parameter rules as Astra)
 - `gpt-6.1-terra` - GPT-6.1 Terra, mid tier ($1/$5 per 1M; $2/$7.5 above 272K input tokens; same parameter rules as Astra)
 - `gpt-6-sol` - GPT-6 Sol, prior workhorse ($2/$10 per 1M)
 - `gpt-6-luna` - GPT-6 Luna, small/cheap tier ($0.1/$0.5 per 1M)
-- `gpt-6-astra` - GPT-6 Astra, most capable (Sep 2026, $10/$50 per 1M; temperature fixed at 1, no verbosity control, effort passed via extra_body)
+- `gpt-6-astra` - GPT-6 Astra, prior top model (Sep 2026, $10/$50 per 1M; temperature fixed at 1, no verbosity control, effort passed via extra_body)
 - `gpt-5.6-sol` - GPT-5.6 flagship (July 2026, $4/$20 per 1M)
 - `gpt-5.6-terra` - Mid tier ($2/$12 per 1M)
 - `gpt-5.6-luna` - Small/cheap tier ($0.2/$1.2 per 1M)
@@ -418,7 +420,7 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - `gpt-5.5-pro` - Stronger reasoning, slower ($30/$180 per 1M; API-only, ChatGPT subscription blocks it)
 - Note: `gpt-5.4` and `gpt-5.4-mini` retired 2026-08-31 — do not offer them
 
-**If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-6.1-sol`, `codex/gpt-5.6-sol`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro` and `gpt-5.3-codex`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
+**If BOTH `OPENAI_API_KEY` AND Codex CLI are configured:** offer both routes. CLI route bills against ChatGPT subscription (`codex/gpt-6.2-sol`, `codex/gpt-6.2-astra`, `codex/gpt-5.6-sol`); API route bills per-token via `OPENAI_API_KEY` and unlocks `gpt-5.5-pro` and `gpt-5.3-codex`. Ask the user which to use (or include both as separate options in the AskUserQuestion multiSelect).
 
 **If ANTHROPIC_API_KEY is set, include:**
 - `claude-opus-5-5` - Claude Opus 5.5 (Oct 2026, $4/$20 per 1M)
@@ -485,7 +487,9 @@ Then present available models to the user using AskUserQuestion with multiSelect
 - Note: routed via litellm to the international endpoint (`api.minimax.io`). For the China endpoint set `MINIMAX_API_BASE=https://api.minimaxi.com/v1`.
 
 **If Codex CLI is installed, include (ChatGPT-account auth):**
-- `codex/gpt-6.1-sol` - GPT-6.1 Sol via Codex CLI (Codex's default model)
+- `codex/gpt-6.2-sol` - GPT-6.2 Sol via Codex CLI (Codex's default model)
+- `codex/gpt-6.2-astra` - GPT-6.2 Astra via Codex CLI, most capable
+- `codex/gpt-6.1-sol` - GPT-6.1 Sol via Codex CLI
 - `codex/gpt-6.1-terra` - GPT-6.1 Terra, mid tier
 - `codex/gpt-6-sol` - GPT-6 Sol
 - `codex/gpt-6-luna` - GPT-6 Luna, fast
