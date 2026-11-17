@@ -62,10 +62,10 @@ def test_defaults_refreshed(monkeypatch):
     monkeypatch.setattr(providers, "CODEX_AVAILABLE", True)
     monkeypatch.setattr(providers, "ANTIGRAVITY_AVAILABLE", True)
     defaults = {name: model for name, _, model in providers.get_available_providers()}
-    assert defaults["OpenAI"] == "gpt-6.1-sol"
+    assert defaults["OpenAI"] == "gpt-6.2-sol"
     assert defaults["Anthropic"] == "claude-opus-5-5"
     assert defaults["Google"] == "gemini/gemini-4-argon"
-    assert defaults["Codex CLI"] == "codex/gpt-6.1-sol"
+    assert defaults["Codex CLI"] == "codex/gpt-6.2-sol"
     assert defaults["Antigravity CLI"] == "antigravity/gemini-3.8-flash-high"
 
 
